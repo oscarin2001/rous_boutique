@@ -65,11 +65,20 @@ type ToolbarNotice = {
   actorName: string;
 };
 
+type ToolbarLanguage = "es" | "en" | "pt" | "fr";
+
+const languageOptions: Array<{ value: ToolbarLanguage; label: string }> = [
+  { value: "es", label: "Espanol" },
+  { value: "en", label: "English" },
+  { value: "pt", label: "Portugues" },
+  { value: "fr", label: "Francais" },
+];
+
 export function DashboardToolbar() {
   const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
   const [, startTransition] = useTransition();
-  const [language, setLanguage] = useState<"es" | "en">("es");
+  const [language, setLanguage] = useState<ToolbarLanguage>("es");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notices, setNotices] = useState<ToolbarNotice[]>([]);
@@ -88,7 +97,6 @@ export function DashboardToolbar() {
   }, []);
 
   const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
-  const toggleLanguage = () => setLanguage((current) => (current === "es" ? "en" : "es"));
 
   const handleNotificationsOpenChange = (open: boolean) => {
     if (!open || unreadCount === 0) return;
@@ -187,20 +195,35 @@ export function DashboardToolbar() {
           {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
           <span className="sr-only">Pantalla completa</span>
         </Button>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={toggleLanguage}>
-          <Languages className="size-4" />
-          {language.toUpperCase()}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="gap-1.5" />}>
+            <Languages className="size-4" />
+            {language.toUpperCase()}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Idioma</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {languageOptions.map((item) => (
+              <DropdownMenuItem key={item.value} onClick={() => setLanguage(item.value)}>
+                {item.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
 }
 
-function t(label: string, language: "es" | "en") {
-  return translations[label]?.[language] ?? label;
+function resolveTranslationLanguage(language: ToolbarLanguage): "es" | "en" {
+  return language === "es" ? "es" : "en";
 }
 
-function buildBreadcrumbs(pathname: string, language: "es" | "en"): Crumb[] {
+function t(label: string, language: ToolbarLanguage) {
+  return translations[label]?.[resolveTranslationLanguage(language)] ?? label;
+}
+
+function buildBreadcrumbs(pathname: string, language: ToolbarLanguage): Crumb[] {
   if (pathname === "/dashboard") {
     return [{ label: t("Vista Ejecutiva", language), href: "/dashboard" }];
   }

@@ -8,6 +8,7 @@ import {
 
 import { redirect } from "next/navigation";
 
+import { ProfileAvatarUploader } from "@/components/super-admin/dashboard/me/content/profile-avatar-uploader";
 import { SkillsLanguagesPanel } from "@/components/super-admin/dashboard/me/content/skills-languages-panel";
 import { Progress } from "@/components/ui/progress";
 
@@ -118,15 +119,11 @@ export async function MePage() {
     <div className="grid gap-6 lg:grid-cols-[330px_1fr]">
       <aside className="space-y-4 rounded-xl bg-card/70 p-4 shadow-sm ring-0">
         <div className="flex items-center gap-3">
-          <div className="relative grid size-16 place-items-center overflow-hidden rounded-full bg-primary text-primary-foreground text-xl font-bold">
-            {employee.photoUrl ? (
-              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${employee.photoUrl})` }} />
-            ) : null}
-            {!employee.photoUrl ? initials : null}
-          </div>
+          <ProfileAvatarUploader initials={initials} photoUrl={employee.photoUrl} />
           <div>
             <h1 className="text-xl font-bold">{fullName}</h1>
             <p className="text-sm text-muted-foreground">{employee.role.code}</p>
+            <p className="text-xs text-muted-foreground">{employee.profession ?? "Profesion no registrada"} - Idioma {employee.language.toUpperCase()}</p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">Perfil ejecutivo del superadmin para control de identidad y configuracion profesional.</p>
