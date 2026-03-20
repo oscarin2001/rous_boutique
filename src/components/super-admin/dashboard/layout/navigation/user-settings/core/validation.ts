@@ -3,6 +3,10 @@ import { HUMAN_NAME_REGEX, parseIsoDate } from "@/lib/field-validation";
 
 import type { CreateAccountFieldErrors, CreateSuperAdminForm, ProfileFieldErrors, ProfileForm } from "./types";
 
+const SKILL_ENTRY_REGEX = /^\s*[^:,]{2,40}\s*:\s*(100|[1-9]?\d)\s*$/;
+const LANGUAGE_ENTRY_REGEX = /^\s*[^:,]{2,40}\s*:\s*(A1|A2|B1|B2|C1|C2)\s*:\s*[^:,]{2,60}\s*$/i;
+const MAX_SKILLS_ENTRIES = 10;
+
 function hasMinimumAge(date: Date, years: number): boolean {
   const today = new Date();
   const limitDate = new Date(Date.UTC(today.getUTCFullYear() - years, today.getUTCMonth(), today.getUTCDate()));
@@ -20,11 +24,23 @@ export function validateProfile(value: ProfileForm): ProfileFieldErrors {
   if (value.phone && !BOLIVIA_PHONE_REGEX.test(value.phone)) errors.phone = "Telefono invalido";
   if (!/^[A-Za-z0-9-]{5,20}$/.test(value.ci)) errors.ci = "CI invalido";
   if (value.profession && value.profession.trim().length > 80) errors.profession = "Profesion demasiado larga";
+  if (value.profession && value.profession.trim().length < 3) errors.profession = "Profesion demasiado corta";
+  if (value.profession && /\s{2,}/.test(value.profession.trim())) errors.profession = "Evita espacios dobles en profesion";
   if (value.photoUrl && value.photoUrl.trim().length > 300) errors.photoUrl = "URL de foto demasiado larga";
   if (value.photoUrl && !/^https?:\/\//i.test(value.photoUrl.trim()) && !value.photoUrl.trim().startsWith("/")) errors.photoUrl = "URL de foto invalida";
-  if (value.aboutMe && value.aboutMe.trim().length > 600) errors.aboutMe = "Sobre mi demasiado largo";
+  if (value.aboutMe && value.aboutMe.trim().length > 600) errors.aboutMe = "Acerca de mi demasiado largo";
+  if (value.aboutMe && value.aboutMe.trim().length < 30) errors.aboutMe = "Acerca de mi debe tener al menos 30 caracteres";
   if (value.skills && value.skills.trim().length > 300) errors.skills = "Habilidades demasiado largas";
+  if (value.skills) {
+    const entries = value.skills.split(",").map((item) => item.trim()).filter(Boolean);
+    if (entries.length > MAX_SKILLS_ENTRIES) errors.skills = `Puedes registrar maximo ${MAX_SKILLS_ENTRIES} habilidades`;
+    if (entries.some((entry) => !SKILL_ENTRY_REGEX.test(entry))) errors.skills = "Formato de habilidades invalido. Usa Nombre:80, Ventas:95";
+  }
   if (value.languages && value.languages.trim().length > 500) errors.languages = "Idiomas demasiado largos";
+  if (value.languages) {
+    const entries = value.languages.split(",").map((item) => item.trim()).filter(Boolean);
+    if (entries.some((entry) => !LANGUAGE_ENTRY_REGEX.test(entry))) errors.languages = "Formato de idiomas invalido. Usa Espanol:C2:Nativo, Ingles:B2:IELTS";
+  }
 
   if (!/^[a-z0-9._@-]{3,60}$/.test(value.username)) errors.username = "Usuario invalido";
   if (value.newPassword && value.newPassword.length < 8) errors.newPassword = "Minimo 8 caracteres";

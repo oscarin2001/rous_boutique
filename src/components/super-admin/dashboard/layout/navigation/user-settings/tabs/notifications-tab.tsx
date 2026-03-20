@@ -1,7 +1,12 @@
 "use client";
 
+import { useState } from "react";
+
+import { ChevronDownIcon } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 
 import { InfoHint } from "../components";
@@ -15,17 +20,25 @@ type Props = {
 };
 
 export function NotificationsTab({ system, isPending, setSystem, onSave }: Props) {
+  const [isGeneralOpen, setIsGeneralOpen] = useState(true);
+  const [isChannelsOpen, setIsChannelsOpen] = useState(true);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="rounded-xl bg-card/80 p-4 shadow-sm ring-1 ring-border/40">
-        <div className="mb-3 flex items-center gap-1 text-sm font-semibold">
+        <div className="flex items-center gap-1 text-sm font-semibold">
           Centro de notificaciones
           <InfoHint text="Controla que eventos generan alertas para tu cuenta superadmin." />
         </div>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Esta seccion gestiona solo alertas y avisos. La configuracion general del sistema esta separada para mantener un flujo profesional por bloques.
-        </p>
-        <div className="space-y-3 rounded-lg border p-3">
+        <p className="mt-1 text-xs text-muted-foreground">Seccionado por estado general y canales de aviso.</p>
+      </div>
+
+      <Collapsible open={isGeneralOpen} onOpenChange={setIsGeneralOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
+        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
+          <p className="text-sm font-semibold">Estado general</p>
+          <ChevronDownIcon className={`size-4 text-muted-foreground transition-transform ${isGeneralOpen ? "rotate-180" : ""}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="border-t p-4">
           <div className="flex items-center gap-2">
             <Checkbox
               id="notifications"
@@ -34,6 +47,15 @@ export function NotificationsTab({ system, isPending, setSystem, onSave }: Props
             />
             <Label htmlFor="notifications" className="font-normal">Activar notificaciones generales</Label>
           </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      <Collapsible open={isChannelsOpen} onOpenChange={setIsChannelsOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
+        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
+          <p className="text-sm font-semibold">Canales de aviso</p>
+          <ChevronDownIcon className={`size-4 text-muted-foreground transition-transform ${isChannelsOpen ? "rotate-180" : ""}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="border-t p-4">
           <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
             <label className="flex items-center gap-2">
               <Checkbox checked={system.notificationChannels.login} onCheckedChange={(checked) => setSystem((v) => ({ ...v, notificationChannels: { ...v.notificationChannels, login: Boolean(checked) } }))} />
@@ -56,8 +78,8 @@ export function NotificationsTab({ system, isPending, setSystem, onSave }: Props
               Avisar eventos de seguridad y sesiones
             </label>
           </div>
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="flex justify-end">
         <Button type="button" onClick={onSave} disabled={isPending}>Guardar notificaciones</Button>

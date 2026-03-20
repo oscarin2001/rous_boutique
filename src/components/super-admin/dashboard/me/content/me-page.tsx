@@ -82,6 +82,24 @@ function parseLanguages(raw: string | null | undefined, fallbackLanguageCode: st
   ];
 }
 
+function buildWhoAmIText(params: {
+  fullName: string;
+  profession: string | null;
+  languages: LanguageRow[];
+  skills: Array<{ name: string; level: number }>;
+}) {
+  const { fullName, profession, languages, skills } = params;
+  const roleText = profession?.trim() || "profesional en gestion y operaciones";
+  const languageText = languages.length
+    ? languages.map((item) => `${item.name} ${item.level}`).join(", ")
+    : "Espanol";
+  const skillText = skills.length
+    ? skills.slice(0, 3).map((item) => item.name).join(", ")
+    : "liderazgo, coordinacion y mejora continua";
+
+  return `${fullName} se desempena como ${roleText}. Se enfoca en la coordinacion de equipos, la excelencia operativa y el cumplimiento de objetivos estrategicos. Domina ${languageText} y aporta fortalezas clave en ${skillText}.`;
+}
+
 export async function MePage() {
   const session = await getSession();
   if (!session) redirect("/super-admin");
@@ -121,6 +139,12 @@ export async function MePage() {
   const username = employee.auth.username;
   const skills = parseSkills(employee.skills);
   const languages = parseLanguages(employee.languages, employee.language);
+  const aboutMeText = employee.aboutMe?.trim() || buildWhoAmIText({
+    fullName,
+    profession: employee.profession,
+    languages,
+    skills,
+  });
   const skillsText = skills.length
     ? skills.map((item) => `${item.name} (${item.level}%)`).join(", ")
     : "Sin habilidades registradas.";
@@ -180,7 +204,10 @@ export async function MePage() {
       <section className="space-y-4">
         <div className="rounded-xl bg-card/70 p-4 shadow-sm ring-0">
           <h2 className="text-sm font-semibold">Datos personales y preferencias</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{employee.aboutMe?.trim() || "Sin descripcion personal registrada."}</p>
+          <div className="mt-3 rounded-lg bg-muted/40 p-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Acerca de mi</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{aboutMeText}</p>
+          </div>
           <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
             <p><span className="text-muted-foreground">Nombre:</span> {fullName}</p>
             <p><span className="text-muted-foreground">Nacimiento:</span> {employee.birthDate ? employee.birthDate.toLocaleDateString("es-BO") : "No registrado"}</p>

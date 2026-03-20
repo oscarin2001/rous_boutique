@@ -73,12 +73,12 @@ export function UserSettingsDialog({ open, onOpenChange, entryPoint = "settings"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sa-modal-wide overflow-hidden p-0">
-        <DialogHeader className="sticky top-0 z-10 border-b bg-card/95 px-5 py-4 backdrop-blur">
+      <DialogContent className="sa-modal-wide overflow-hidden p-0 ring-1 ring-border/30">
+        <DialogHeader className="sticky top-0 z-10 border-b border-border/40 bg-card/95 px-5 py-4 backdrop-blur">
           <DialogTitle className="flex items-center gap-2"><Settings className="size-4" />Centro de configuracion superadmin</DialogTitle>
         </DialogHeader>
         <div className="grid min-h-[560px] grid-cols-[230px_1fr] bg-gradient-to-b from-muted/10 to-transparent">
-          <aside className="border-r bg-muted/10 p-3">
+          <aside className="border-r border-border/40 bg-muted/10 p-3">
             <p className="px-2 pb-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Configuracion</p>
             <div className="space-y-1">
               {tabMenu.map((item) => {

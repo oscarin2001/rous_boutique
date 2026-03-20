@@ -80,10 +80,6 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
     });
   }, [open]);
 
-  const changeTab = (tab: TabId) => {
-    setActiveTab(tab);
-  };
-
   const requestConfirmation = (action: SensitiveAction) => {
     setPendingAction(action);
     setConfirmError(null);
@@ -165,7 +161,7 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
   const confirmMeta = getConfirmMeta(pendingAction);
 
   return {
-    activeTab, setActiveTab: changeTab, isPending, profile, setProfile, system, setSystem, createAccount, setCreateAccount, sessions, auditFeed,
+    activeTab, setActiveTab, isPending, profile, setProfile, system, setSystem, createAccount, setCreateAccount, sessions, auditFeed,
     profileErrors, setProfileErrors, createErrors, setCreateErrors, isEditingCredentials, setIsEditingCredentials, canSubmitProfile,
     saveProfile, saveSystem, createSuperAdmin, revokeOtherSessions,
     closeSessionsPromptOpen, setCloseSessionsPromptOpen, confirmCloseOtherSessions,

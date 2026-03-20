@@ -6,7 +6,7 @@ import { Bell, Languages, Maximize, MessageSquare, Minimize, Moon, Sun } from "l
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import {
   getSuperAdminToolbarLanguageAction,
@@ -47,6 +47,7 @@ const translations: Record<string, { es: string; en: string }> = {
   "Vista Ejecutiva": { es: "Vista Ejecutiva", en: "Executive View" },
   "Panel Ejecutivo": { es: "Panel Ejecutivo", en: "Executive Panel" },
   Pedidos: { es: "Pedidos", en: "Orders" },
+  Notificaciones: { es: "Notificaciones", en: "Notifications" },
   Inventario: { es: "Inventario", en: "Inventory" },
   "Red Operativa": { es: "Red Operativa", en: "Operations Network" },
   Sucursales: { es: "Sucursales", en: "Branches" },
@@ -66,6 +67,8 @@ type ToolbarNotice = {
   description: string;
   createdAt: string;
   actorName: string;
+  showExactTimestamp: boolean;
+  lastConnectionAt: string | null;
 };
 
 type ToolbarLanguage = "es" | "en" | "pt" | "fr";
@@ -79,6 +82,7 @@ const languageOptions: Array<{ value: ToolbarLanguage; label: string }> = [
 
 export function DashboardToolbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [, startTransition] = useTransition();
   const [language, setLanguage] = useState<ToolbarLanguage>("es");
@@ -205,9 +209,15 @@ export function DashboardToolbar() {
               <DropdownMenuItem key={item.id} className="block space-y-1">
                 <p className="text-xs font-medium">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.description}</p>
-                <p className="text-[11px] text-muted-foreground">{new Date(item.createdAt).toLocaleString("es-BO")} - {item.actorName}</p>
+                {item.showExactTimestamp ? (
+                  <p className="text-[11px] text-muted-foreground">{new Date(item.createdAt).toLocaleString("es-BO")} - {item.actorName}</p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Ultima conexion: {item.lastConnectionAt ? new Date(item.lastConnectionAt).toLocaleString("es-BO") : "sin dato"}</p>
+                )}
               </DropdownMenuItem>
             )) : <DropdownMenuItem disabled>No hay notificaciones recientes.</DropdownMenuItem>}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/dashboard/notifications")}>Ver todas las notificaciones</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <Button variant="outline" size="icon-sm">
@@ -257,6 +267,10 @@ function buildBreadcrumbs(pathname: string, language: ToolbarLanguage): Crumb[] 
 
   if (pathname.startsWith("/dashboard/me")) {
     return [{ label: language === "es" ? "Mi perfil" : "My profile", href: "/dashboard/me" }];
+  }
+
+  if (pathname.startsWith("/dashboard/notifications")) {
+    return [{ label: language === "es" ? "Notificaciones" : "Notifications", href: "/dashboard/notifications" }];
   }
 
   for (const group of superAdminNavGroups) {
