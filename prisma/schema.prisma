@@ -1,429 +1,1255 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
-//////////////////////////////
-// privilegeS DE USUARIO Y USUARIOS
-//////////////////////////////
+// ═══════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════
 
-model tbprivileges {
-  PK_privilege      Int       @id @default(autoincrement())
-  privilegeName     String    @unique //Ingeniero de sistema
-  privilegeCode String    @unique //  SYS_IS
-  description  String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime? 
-  actionHistory Json?
-  tbusers      tbusers[]
+// RBAC
+enum RoleCode {
+  SUPERADMIN
+  ADMIN
+  MANAGER
+  STAFF
+  MAINTENANCE
 }
-// EJEMPLO DE CODIGO DE PRIVILEGIOS
-  //     "SYS_IS", Ingeniero de sistemas
-  //     "SYS_AD", Administrador
 
-// USUARIOS DE SISTEMA
-model tbusers {
-  PK_user           Int       @id @default(autoincrement())
-  FK_privilege      Int
-  firstName         String
-  lastName          String
-  email             String    @unique
-  phoneNumber       String?
-  password          String
-  isActive          Boolean   @default(true)
-  lastLogin         DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime? 
-  actionHistory     Json?
-
-  tbprivileges           tbprivileges   @relation(fields: [FK_privilege], references: [PK_privilege])
-  tbdevices         tbdevices?
-  tbpushsubscriptions tbpushsubscriptions[]
-  tbaddresses       tbaddresses[]
-  tborders          tborders[]
-  tbpayments        tbpayments[]
-  tbreviews         tbreviews[]
-  tbattendances         tbattendances[]
-
+enum AccountType {
+  CUSTOMER
+  EMPLOYEE
+  BOTH
 }
-// DISPOSITIVOS
 
-model tbdevices {
-  PK_device  Int       @id @default(autoincrement())
-  FK_user    Int       @unique
-  devices    Json
+// People
+enum EmployeeStatus {
+  ACTIVE
+  DEACTIVATED
+  INACTIVE
+}
+
+enum ContractType {
+  INDEFINITE
+  TEMPORARY
+  SERVICES
+}
+
+enum ContributionType {
+  NONE
+  CONTRIBUTES
+  PAID
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum DeviceType {
+  POS
+  MOBILE
+  WEB
+  OTHER
+}
+
+// Orders & Payments
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  QR
+  TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  NOT_REQUIRED
+  PENDING_SHIPMENT
+  IN_TRANSIT
+  DELIVERED
+}
+
+enum ShipmentStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum ShippingCostPayer {
+  SENDER
+  RECIPIENT
+}
+
+enum ShippingPaymentMode {
+  PREPAID
+  COD
+}
+
+// Inventory & Stock
+enum MovementType {
+  INBOUND
+  OUTBOUND
+  ADJUSTMENT
+}
+
+enum EntryType {
+  PURCHASE
+  RETURN
+  TRANSFER
+  OTHER
+}
+
+enum ProductCondition {
+  EXCELLENT
+  GOOD
+  ACCEPTABLE
+  DAMAGED
+}
+
+enum AdjustmentType {
+  DAMAGED
+  STAIN
+  COUNT_ERROR
+  GIFT
+}
+
+// Finance
+enum CashFlowDirection {
+  IN
+  OUT
+}
+
+enum CashFlowCategory {
+  SALE
+  RESERVATION
+  SHIPPING
+  TRANSPORT
+  SALARY
+  OTHER
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum ExpenseCategory {
+  CLEANING
+  TRANSPORT
+  RENT
+  SALARY
+  SUPPLIES
+  OTHER
+}
+
+enum PurchaseStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum PayrollStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+// Reservations & Shifts
+enum ReservationStatus {
+  PENDING
+  EXPIRED
+  COMPLETED
+  ON_APPROVAL
+  SHIPPED
+}
+
+enum ShiftType {
+  NORMAL
+  ROTATING
+  EXTRA
+}
+
+// System
+enum AuditOperation {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RBAC — Roles, Permissions & Authentication
+// ═══════════════════════════════════════════════════════════════
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // e.g. "Administrador", "Gerente", "Empleado", "Mantenimiento"
+  code        RoleCode @unique // ADMIN, MANAGER, STAFF, MAINTENANCE
+  description String?
+  createdAt   DateTime @default(now())
+
+  employees   Employee[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          Int    @id @default(autoincrement())
+  code        String @unique // e.g. INVENTORY_EDIT, SALES_VIEW, REPORTS_ACCESS
+  description String
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model Auth {
+  id          Int         @id @default(autoincrement())
+  username    String      @unique
+  password    String
+  isActive    Boolean     @default(true)
+  lastLogin   DateTime?
+  accountType AccountType @default(CUSTOMER)
+  createdAt   DateTime    @default(now())
+
+  employee          Employee?
+  customer          Customer?
+  device            Device?
+  pushSubscriptions PushSubscription[]
+  authSessions      AuthSession[]
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PEOPLE — Employees & Customers
+// ═══════════════════════════════════════════════════════════════
+
+model Employee {
+  id       Int  @id @default(autoincrement())
+  authId   Int  @unique
+  roleId   Int
+  branchId Int? // Primary branch assignment
+
+  // Personal data
+  firstName String
+  lastName  String
+  ci        String    @unique // Cédula de Identidad (Bolivia)
+  phone     String?
+  birthDate DateTime?
+
+  // Employment data
+  salary           Decimal          @default(0)
+  hireDate         DateTime         @default(now())
+  contractEndAt    DateTime?
+  contractType     ContractType     @default(INDEFINITE)
+  contributionType ContributionType @default(NONE)
+  status           EmployeeStatus   @default(ACTIVE)
+  homeAddress      String?
+  deletedAt        DateTime?
+
+  // Preferences
+  theme         Theme   @default(SYSTEM)
+  notifications Boolean @default(true)
+  language      String  @default("es")
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+  createdById Int?
+  updatedById Int?
+
+  // Core relations
+  auth   Auth    @relation(fields: [authId], references: [id])
+  role   Role    @relation(fields: [roleId], references: [id])
+  branch Branch? @relation("PrimaryBranch", fields: [branchId], references: [id])
+
+  // Self-referencing audit
+  createdBy        Employee?  @relation("EmployeeCreatedBy", fields: [createdById], references: [id])
+  employeesCreated Employee[] @relation("EmployeeCreatedBy")
+  updatedBy        Employee?  @relation("EmployeeUpdatedBy", fields: [updatedById], references: [id])
+  employeesUpdated Employee[] @relation("EmployeeUpdatedBy")
+
+  // Multi-branch assignment
+  employeeBranches EmployeeBranch[]
+
+  // Business relations
+  cashSessions        CashSession[]
+  salesMade           Order[]           @relation("SellerRelation")
+  attendances         Attendance[]
+  shifts              ShiftSchedule[]
+  warehouseEntries    WarehouseEntry[]
+  stockAdjustments    StockAdjustment[]
+  expenses            Expense[]
+  payrolls            Payroll[]
+  transfersSent       StockTransfer[]   @relation("TransferSender")
+  transfersReceived   StockTransfer[]   @relation("TransferReceiver")
+  auditLogs           AuditLog[]
+  cashFlows           CashFlow[]
+  reservationsUpdated Reservation[]     @relation("ReservationUpdatedBy")
+  purchases           Purchase[]
+  supplierPayments    SupplierPayment[]
+  supplierManagers    SupplierManager[]
+  warehouseManagers   WarehouseManager[]
+  employeeSettings    EmployeeSettings?
+}
+
+model EmployeeSettings {
+  id                    Int       @id @default(autoincrement())
+  employeeId            Int       @unique
+  timezone              String    @default("America/La_Paz")
+  dateFormat            String    @default("DD/MM/YYYY")
+  timeFormat            String    @default("24h")
+  currency              String    @default("BOB")
+  sessionTtlMinutes     Int       @default(480)
+  emergencyPhone        String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  signatureDisplayName  String?
+  signatureTitle        String?
+  notifyOnLogin         Boolean   @default(true)
+  notifyOnCreate        Boolean   @default(true)
+  notifyOnUpdate        Boolean   @default(true)
+  notifyOnDelete        Boolean   @default(true)
+  notifyOnSecurity      Boolean   @default(true)
+  notificationLastReadAt DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime? @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+model AuthSession {
+  id         Int       @id @default(autoincrement())
+  authId     Int
+  sessionId  String    @unique
+  userAgent  String?
+  ipAddress  String?
+  deviceType String?
+  browser    String?
+  os         String?
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime? 
-  tbusers    tbusers   @relation(fields: [FK_user], references: [PK_user])
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  auth Auth @relation(fields: [authId], references: [id])
+
+  @@index([authId])
+  @@index([expiresAt])
 }
 
+model Customer {
+  id        Int     @id @default(autoincrement())
+  authId    Int?    @unique
+  firstName String
+  lastName  String?
+  phone     String? @unique
+  email     String? @unique
 
-// NOTIFICACIONES
+  // Address & location
+  city        String?
+  department  String?
+  homeAddress String?
+  googleMaps  String?
 
-model tbpushsubscriptions {
-  PK_pushsubscription Int       @id @default(autoincrement())
-  FK_user             Int
-  endpoint            String    @unique
-  auth                String
-  p256dh              String
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime?
+  // Metrics
+  customerLevel String  @default("NEW")
+  totalSpent    Decimal @default(0)
+  ordersCount   Int     @default(0)
+  isGuest       Boolean @default(true)
 
-  tbusers             tbusers   @relation(fields: [FK_user], references: [PK_user])
+  deletedAt DateTime?
+
+  auth         Auth?         @relation(fields: [authId], references: [id])
+  orders       Order[]
+  addresses    Address[]
+  reviews      Review[]
+  reservations Reservation[]
+  cartItems    CartItem[]
 }
 
-//////////////////////////////
-// SUCURSALES
-//////////////////////////////
+// ═══════════════════════════════════════════════════════════════
+// ORGANIZATION — Branches & Warehouses
+// ═══════════════════════════════════════════════════════════════
 
-model tbbranches {
-  PK_branch     Int       @id @default(autoincrement())
-  name          String // Rousboutique-America
-  phone         String?
-  address       String //Ubicacion
-  city          String //Ciudad = Cercado
-  department    String //Departamento = Cochabamba
-  latitude      Float
-  longitude     Float
-  openingHours  Json?     // Horarios semanales en JSON
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime? 
-  actionHistory Json?
-  // FALTA ENCARGADO DE SUCURSAL
-  tbinventories tbinventories[]
+model Branch {
+  id         Int       @id @default(autoincrement())
+  name       String    // e.g. "RousBoutique Centro"
+  nit        String?   // NIT — Número de Identificación Tributaria (Bolivia)
+  phone      String?
+  address    String
+  city       String    // e.g. "Cercado"
+  department String?   // e.g. "Cochabamba"
+  country    String    @default("Bolivia")
+  googleMaps String?
+  openedAt   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  // Relations
+  employees         Employee[]         @relation("PrimaryBranch")
+  employeeBranches  EmployeeBranch[]
+  inventories       Inventory[]
+  transfersFrom     StockTransfer[]    @relation("OriginBranch")
+  transfersTo       StockTransfer[]    @relation("DestinationBranch")
+  cashSessions      CashSession[]
+  specialDays       BranchSpecialDay[]
+  hours             BranchHour[]
+  stockAdjustments  StockAdjustment[]
+  warehouseEntries  WarehouseEntry[]
+  cashFlows         CashFlow[]
+  reservations      Reservation[]
+  stockMovements    StockMovement[]
+  shifts            ShiftSchedule[]
+  expenses          Expense[]
+  supplierBranches  SupplierBranch[]
+  warehouseBranches WarehouseBranch[]
+  orders            Order[]
 }
-// HORARIOS DE DIAS ESPECIALES DE LA SUCURSAL
 
-model tbbranchspecialdays {
-  PK_specialday Int       @id @default(autoincrement())
-  FK_branch     Int
-  date          DateTime  // Fecha exacta (solo fecha, sin hora)
-  isClosed      Boolean   @default(false)  // Si la sucursal está cerrada todo el día
-  openingTime   String?   // "09:00" - solo si no está cerrado todo el día
-  closingTime   String?   // "18:00" - solo si no está cerrado todo el día
-  notes         String?   // Comentarios o motivo (p.ej. "Feriado nacional")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime? 
-  actionHistory Json?
-  
-  tbbranches    tbbranches @relation(fields: [FK_branch], references: [PK_branch])
+model EmployeeBranch {
+  id         Int      @id @default(autoincrement())
+  employeeId Int
+  branchId   Int
+  assignedAt DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  branch   Branch   @relation(fields: [branchId], references: [id])
+
+  @@unique([employeeId, branchId])
+  @@index([employeeId])
+  @@index([branchId])
 }
 
+model Warehouse {
+  id         Int       @id @default(autoincrement())
+  name       String    // e.g. "Bodega Central Norte"
+  phone      String?
+  address    String
+  city       String
+  department String?
+  country    String    @default("Bolivia")
+  openedAt   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
 
-// Asistencia
+  managers          WarehouseManager[]
+  warehouseBranches WarehouseBranch[]
+}
 
-model tbattendances {
-  PK_attendance   Int       @id @default(autoincrement())
-  FK_user    Int
-  date           String //Fecha 
+model WarehouseManager {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  warehouseId Int
+  assignedAt  DateTime @default(now())
+
+  employee  Employee  @relation(fields: [employeeId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@unique([employeeId, warehouseId])
+}
+
+model WarehouseBranch {
+  id          Int      @id @default(autoincrement())
+  warehouseId Int
+  branchId    Int
+  isPrimary   Boolean  @default(false)
+  assignedAt  DateTime @default(now())
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  branch    Branch    @relation(fields: [branchId], references: [id])
+
+  @@unique([warehouseId, branchId])
+}
+
+model BranchHour {
+  id          Int       @id @default(autoincrement())
+  branchId    Int
+  dayOfWeek   Int       // 0=Sunday … 6=Saturday
+  openingTime String?   // "09:00"
+  closingTime String?   // "18:00"
+  isClosed    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([branchId, dayOfWeek])
+}
+
+model BranchSpecialDay {
+  id          Int       @id @default(autoincrement())
+  branchId    Int
+  date        DateTime
+  isClosed    Boolean   @default(false)
+  openingTime String?
+  closingTime String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+
+  branch Branch @relation(fields: [branchId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DEVICES & NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+
+model Device {
+  id        Int       @id @default(autoincrement())
+  authId    Int       @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+
+  auth    Auth           @relation(fields: [authId], references: [id])
+  details DeviceDetail[]
+}
+
+model DeviceDetail {
+  id         Int      @id @default(autoincrement())
+  deviceId   Int
+  deviceType String   // "mobile", "desktop", "tablet"
+  browser    String?
+  os         String?
+  userAgent  String?
+  ipAddress  String?
+  lastSeen   DateTime @default(now())
+
+  device Device @relation(fields: [deviceId], references: [id])
+}
+
+model PushSubscription {
+  id        Int       @id @default(autoincrement())
+  authId    Int
+  endpoint  String    @unique
+  auth_key  String
+  p256dh    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+
+  authAccount Auth @relation(fields: [authId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HR — Attendance, Shifts & Payroll
+// ═══════════════════════════════════════════════════════════════
+
+model Attendance {
+  id         Int        @id @default(autoincrement())
+  employeeId Int
+  date       String
   checkIn    DateTime
   checkOut   DateTime?
-  device    String // Dispositivo del cual se toma la asistencia
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime
-  actionHistory  Json?
-  tbusers    tbusers @relation(fields: [FK_user], references: [PK_user])
+  device     DeviceType
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime
+
+  employee Employee @relation(fields: [employeeId], references: [id])
 }
 
-model tbpayrolls {
-  PK_payroll    Int       @id @default(autoincrement())
-  FK_user  Int
-  periodStart   DateTime
-  periodEnd     DateTime
-  baseSalary    Float
-  bonuses       Float?
-  deductions    Float?
-  netSalary     Float
-  status        String    // Pagado, Pendiente
-  paymentDate   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime? @updatedAt
-  actionHistory Json?
+model ShiftSchedule {
+  id         Int       @id @default(autoincrement())
+  employeeId Int
+  branchId   Int
+  date       DateTime
+  startTime  String    // "08:00"
+  endTime    String    // "14:00"
+  shiftType  ShiftType @default(NORMAL)
+  isHoliday  Boolean   @default(false)
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
 
+  employee Employee @relation(fields: [employeeId], references: [id])
+  branch   Branch   @relation(fields: [branchId], references: [id])
+
+  @@unique([employeeId, date])
 }
-// GENERO
-model tbgenders {
-  PK_gender   Int      @id @default(autoincrement())
-  gender        String   @unique  // Ej: Hombre, Mujer, Niño, Unisex
-  createdAt   DateTime @default(now())
+
+model Payroll {
+  id         Int           @id @default(autoincrement())
+  employeeId Int
+  periodStart DateTime
+  periodEnd   DateTime
+  baseSalary  Decimal
+  bonuses     Decimal?
+  deductions  Decimal?
+  netSalary   Decimal
+  status      PayrollStatus @default(PENDING)
+  paymentDate DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime?     @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CATALOG — Genders, Categories, Attributes, Brands & Seasons
+// ═══════════════════════════════════════════════════════════════
+
+model Gender {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique // e.g. "Hombre", "Mujer", "Niño", "Unisex"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+
+  categories Category[]
+  products   Product[]
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  genderId    Int
+  parentId    Int?      // null = root category
+  name        String
+  slug        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
   updatedAt   DateTime?
-  actionHistory Json?
-  tbcategories tbcategories[]  // Relación 1:N (un género muchas categorías)
+
+  gender        Gender     @relation(fields: [genderId], references: [id])
+  parent        Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  subCategories Category[] @relation("SubCategories")
+
+  productCategories ProductCategory[]
 }
 
-//////////////////////////////
-// CATEGORÍAS Y ATRIBUTOS (para productos tipo ropa, zapatos, etc)
-//////////////////////////////
+model Attribute {
+  id        Int       @id @default(autoincrement())
+  name      String    // e.g. "Color", "Talla", "Material"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
 
-model tbcategories {
-  PK_category  Int       @id @default(autoincrement())
-  FK_gender    Int       // FK a tbgenders
-  category         String
-  slug         String    @unique // URL unico en minuscula y con "-" como separador
-  description  String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime? 
-  actionHistory Json?
-
-  tbgenders    tbgenders  @relation(fields: [FK_gender], references: [PK_gender])
+  values AttributeValue[]
 }
 
+model AttributeValue {
+  id          Int       @id @default(autoincrement())
+  attributeId Int
+  value       String    // e.g. "Rojo", "M", "Algodón"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
 
-model tbattributes {
-  PK_attribute Int       @id @default(autoincrement())
-  attribute         String    // Ej: Color, Talla, Material
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime? @updatedAt
-
-  tbattributevalues tbattributevalues[]
+  attribute         Attribute          @relation(fields: [attributeId], references: [id])
+  variantAttributes VariantAttribute[]
 }
 
-model tbattributevalues {
-  PK_value       Int       @id @default(autoincrement())
-  FK_attribute   Int
-  value          String    // Ej: Rojo, M, Algodón
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime? @updatedAt
+model Brand {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
 
-  tbattributes   tbattributes @relation(fields: [FK_attribute], references: [PK_attribute])
+  products Product[]
 }
 
-//////////////////////////////
-// PRODUCTOS Y VARIANTES
-//////////////////////////////
+model Season {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // e.g. "Verano 2025", "Invierno 2026"
+  createdAt DateTime @default(now())
 
-model tbproducts {
-  PK_product      Int       @id @default(autoincrement())
-  sku             String    @unique
-  name            String
-  slug            String    @unique
-  description     String?
-  price           Float
-  weight          Float?
-  length          Float?
-  width           Float?
-  height          Float?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime? @updatedAt
-  actionHistory   Json?
-
-  tbinventories         tbinventories[]
-  tbproductcategories   tbproductcategories[]
-  tbproductvariants     tbproductvariants[]
-  tborderitems          tborderitems[]
-  tbreviews             tbreviews[]
+  products Product[]
 }
 
-model tbproductcategories {
-  PK_productcategory Int    @id @default(autoincrement())
-  FK_product         Int
-  FK_category        Int
+// ═══════════════════════════════════════════════════════════════
+// PRODUCTS — Products, Variants & Pricing
+// ═══════════════════════════════════════════════════════════════
 
-  tbproducts         tbproducts   @relation(fields: [FK_product], references: [PK_product])
-  tbcategories       tbcategories @relation(fields: [FK_category], references: [PK_category])
+model Product {
+  id          Int       @id @default(autoincrement())
+  genderId    Int
+  brandId     Int?
+  seasonId    Int?
+  sku         String    @unique
+  name        String
+  slug        String    @unique
+  description String?
+  fabricType  String?   // Tipo de tela (Seda, Algodón, Licra)
+  composition String?   // e.g. "90% Algodón, 10% Poliéster"
+  careNotes   String?   // Instrucciones de lavado
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  gender Gender  @relation(fields: [genderId], references: [id])
+  brand  Brand?  @relation(fields: [brandId], references: [id])
+  season Season? @relation(fields: [seasonId], references: [id])
+
+  categories ProductCategory[]
+  variants   ProductVariant[]
+  reviews    Review[]
+
+  @@index([brandId, seasonId, isActive])
+  @@index([slug])
 }
 
-model tbproductvariants {
-  PK_variant      Int       @id @default(autoincrement())
-  FK_product      Int
-  sku             String    @unique
-  price           Float?
-  stockQuantity   Int       @default(0)
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime? @updatedAt
+model ProductCategory {
+  id         Int @id @default(autoincrement())
+  productId  Int
+  categoryId Int
 
-  tbproducts      tbproducts @relation(fields: [FK_product], references: [PK_product])
-  tbvariantattributes tbvariantattributes[]
+  product  Product  @relation(fields: [productId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
 }
 
-model tbvariantattributes {
-  PK_variantattribute Int    @id @default(autoincrement())
-  FK_variant          Int
-  FK_attributevalue   Int
-
-  tbproductvariants   tbproductvariants @relation(fields: [FK_variant], references: [PK_variant])
-  tbattributevalues   tbattributevalues @relation(fields: [FK_attributevalue], references: [PK_value])
-}
-
-//////////////////////////////
-// INVENTARIO POR SUCURSAL Y VARIANTE DE PRODUCTO
-//////////////////////////////
-
-model tbinventories {
-  PK_inventory  Int       @id @default(autoincrement())
-  FK_productvariant Int
-  FK_branch     Int
-  quantity      Int       @default(0)
-  reserved      Int       @default(0)
+model ProductVariant {
+  id            Int       @id @default(autoincrement())
+  productId     Int
+  sku           String    @unique
+  price         Decimal?
+  discountPrice Decimal?
+  imageUrl      String?
+  isPublished   Boolean   @default(false)
+  featured      Boolean   @default(false)
+  publishDate   DateTime?
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime? @updatedAt
 
-  tbproductvariants tbproductvariants @relation(fields: [FK_productvariant], references: [PK_variant])
-  tbbranches       tbbranches         @relation(fields: [FK_branch], references: [PK_branch])
+  product           Product            @relation(fields: [productId], references: [id])
+  variantAttributes VariantAttribute[]
+  priceHistory      PriceHistory[]
+  stockAdjustments  StockAdjustment[]
+  inventories       Inventory[]
+  warehouseEntries  WarehouseEntry[]
+  stockTransfers    StockTransfer[]
+  orderItems        OrderItem[]
+  reservations      Reservation[]
+  stockMovements    StockMovement[]
+  cartItems         CartItem[]
+
+  @@index([productId, isPublished, isActive])
+  @@index([sku])
+  @@index([isPublished, featured, isActive])
 }
 
-//////////////////////////////
-// PEDIDOS Y ITEMS
-//////////////////////////////
+model VariantAttribute {
+  id               Int @id @default(autoincrement())
+  variantId        Int
+  attributeValueId Int
 
-model tborders {
-  PK_order        Int       @id @default(autoincrement())
-  FK_user         Int
-  orderNumber     String    @unique
-  status          String    @default("Pending")
-  totalAmount     Float
-  paymentMethod   String?
-  shippingMethod  String?
-  shippingCost    Float?
-  FK_billingAddress  Int?
-  FK_shippingAddress Int?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime? @updatedAt
-  actionHistory   Json?
-
-  tbusers         tbusers    @relation(fields: [FK_user], references: [PK_user])
-  tbaddressesBilling  tbaddresses? @relation("billingAddress", fields: [FK_billingAddress], references: [PK_address])
-  tbaddressesShipping tbaddresses? @relation("shippingAddress", fields: [FK_shippingAddress], references: [PK_address])
-  tborderitems    tborderitems[]
-  tbpayments      tbpayments[]
-  tbshipments    tbshipments[]
+  variant        ProductVariant @relation(fields: [variantId], references: [id])
+  attributeValue AttributeValue @relation(fields: [attributeValueId], references: [id])
 }
 
-model tborderitems {
-  PK_orderitem   Int       @id @default(autoincrement())
-  FK_order       Int
-  FK_productvariant Int
+model PriceHistory {
+  id        Int       @id @default(autoincrement())
+  variantId Int
+  price     Decimal
+  validFrom DateTime  @default(now())
+  validTo   DateTime?
+  reason    String?
+  createdAt DateTime  @default(now())
+
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVENTORY — Stock, Movements & Transfers
+// ═══════════════════════════════════════════════════════════════
+
+model Inventory {
+  id        Int       @id @default(autoincrement())
+  variantId Int
+  branchId  Int
+  quantity  Int       @default(0)
+  reserved  Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+  branch  Branch         @relation(fields: [branchId], references: [id])
+
+  @@unique([variantId, branchId])
+}
+
+model StockMovement {
+  id         Int          @id @default(autoincrement())
+  variantId  Int
+  branchId   Int
+  purchaseId Int?
+  type       MovementType
+  quantity   Int
+  reason     String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime?    @updatedAt
+
+  variant  ProductVariant @relation(fields: [variantId], references: [id])
+  branch   Branch         @relation(fields: [branchId], references: [id])
+  purchase Purchase?      @relation(fields: [purchaseId], references: [id])
+
+  @@index([createdAt])
+}
+
+model StockAdjustment {
+  id             Int            @id @default(autoincrement())
+  variantId      Int
+  branchId       Int
+  employeeId     Int
   quantity       Int
-  unitPrice      Float
-  totalPrice     Float
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime? @updatedAt
+  adjustmentType AdjustmentType
+  reason         String?
+  createdAt      DateTime       @default(now())
 
-  tborders         tborders       @relation(fields: [FK_order], references: [PK_order])
-  tbproductvariants tbproductvariants @relation(fields: [FK_productvariant], references: [PK_variant])
+  variant  ProductVariant @relation(fields: [variantId], references: [id])
+  branch   Branch         @relation(fields: [branchId], references: [id])
+  employee Employee       @relation(fields: [employeeId], references: [id])
 }
 
-//////////////////////////////
-// DIRECCIONES DE USUARIO
-//////////////////////////////
+model WarehouseEntry {
+  id             Int              @id @default(autoincrement())
+  purchaseId     Int?
+  employeeId     Int
+  variantId      Int
+  branchId       Int
+  barCode        String           @unique
+  costPrice      Decimal?
+  salePrice      Decimal
+  entryType      EntryType        @default(PURCHASE)
+  condition      ProductCondition @default(EXCELLENT)
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime?        @updatedAt
 
-model tbaddresses {
-  PK_address     Int       @id @default(autoincrement())
-  FK_user        Int
-  label          String?   // Casa, Oficina, etc.
-  address1       String
-  address2       String?
-  city           String
-  state          String?
-  country        String
-  postalCode     String
-  latitude       Float?
-  longitude      Float?
-  isDefault      Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime? @updatedAt
+  purchase Purchase?      @relation(fields: [purchaseId], references: [id])
+  employee Employee       @relation(fields: [employeeId], references: [id])
+  variant  ProductVariant @relation(fields: [variantId], references: [id])
+  branch   Branch         @relation(fields: [branchId], references: [id])
 
-  tbusers        tbusers   @relation(fields: [FK_user], references: [PK_user])
+  @@index([createdAt])
 }
 
-//////////////////////////////
-// PAGOS
-//////////////////////////////
+model StockTransfer {
+  id                Int            @id @default(autoincrement())
+  variantId         Int
+  originBranchId    Int
+  destinationBranchId Int
+  senderId          Int
+  receiverId        Int?
+  quantity          Int
+  quantityReceived  Int?
+  status            ShipmentStatus @default(IN_TRANSIT)
+  notes             String?
+  sentAt            DateTime       @default(now())
+  receivedAt        DateTime?
 
-model tbpayments {
-  PK_payment     Int       @id @default(autoincrement())
-  FK_order       Int
-  amount         Float
-  paymentDate    DateTime  @default(now())
-  paymentMethod  String
-  transactionId  String?   @unique
-  status         String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime? @updatedAt
-  actionHistory  Json?
-
-  tborders       tborders  @relation(fields: [FK_order], references: [PK_order])
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  origin      Branch         @relation("OriginBranch", fields: [originBranchId], references: [id])
+  destination Branch         @relation("DestinationBranch", fields: [destinationBranchId], references: [id])
+  sender      Employee       @relation("TransferSender", fields: [senderId], references: [id])
+  receiver    Employee?      @relation("TransferReceiver", fields: [receiverId], references: [id])
 }
 
-//////////////////////////////
-// ENVIOS Y SEGUIMIENTO
-//////////////////////////////
+// ═══════════════════════════════════════════════════════════════
+// FINANCE — Cash Sessions, Cash Flows & Expenses
+// ═══════════════════════════════════════════════════════════════
 
-model tbshipments {
-  PK_shipment     Int       @id @default(autoincrement())
-  FK_order        Int
-  trackingNumber  String?   @unique
-  carrier         String?
-  status          String
-  shippedAt       DateTime?
-  deliveredAt     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime? @updatedAt
-  actionHistory   Json?
+model CashSession {
+  id             Int               @id @default(autoincrement())
+  branchId       Int
+  employeeId     Int
+  openingAmount  Decimal           @default(0)
+  expectedAmount Decimal           @default(0)
+  realAmount     Decimal?
+  totalCash      Decimal           @default(0)
+  totalQr        Decimal           @default(0)
+  totalTransfer  Decimal           @default(0)
+  status         CashSessionStatus @default(OPEN)
+  openedAt       DateTime          @default(now())
+  closedAt       DateTime?
+  notes          String?
 
-  tborders        tborders  @relation(fields: [FK_order], references: [PK_order])
+  branch   Branch   @relation(fields: [branchId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  cashFlows CashFlow[]
+  expenses  Expense[]
+  actions   CashSessionAction[]
+
+  // Enforce max one OPEN session per branch at application level
+  @@index([branchId, status])
 }
 
-//////////////////////////////
-// RESEÑAS DE PRODUCTOS
-//////////////////////////////
+model CashSessionAction {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  action    String   // "OPEN", "CLOSE", "EXPENSE", "SALE"
+  amount    Decimal?
+  details   String?
+  createdAt DateTime @default(now())
 
-model tbreviews {
-  PK_review     Int       @id @default(autoincrement())
-  FK_product    Int
-  FK_user       Int
-  rating        Int       // 1 a 5
-  title         String?
-  content       String?
-  isApproved    Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime? @updatedAt
-
-  tbproducts    tbproducts @relation(fields: [FK_product], references: [PK_product])
-  tbusers       tbusers    @relation(fields: [FK_user], references: [PK_user])
+  session CashSession @relation(fields: [sessionId], references: [id])
 }
 
-//////////////////////////////
-// RESERVAS (para productos o servicios)
-//////////////////////////////
+model CashFlow {
+  id          Int               @id @default(autoincrement())
+  branchId    Int
+  employeeId  Int
+  sessionId   Int?
+  amount      Decimal
+  type        CashFlowDirection
+  method      PaymentMethod
+  category    CashFlowCategory
+  description String?
+  createdAt   DateTime          @default(now())
 
-model tbreservations {
-  PK_reservation Int       @id @default(autoincrement())
-  FK_user        Int
-  FK_productvariant Int?
-  reservationDate DateTime
-  quantity       Int
-  status         String    // Pendiente, Confirmada, Cancelada
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime? @updatedAt
+  branch   Branch       @relation(fields: [branchId], references: [id])
+  employee Employee     @relation(fields: [employeeId], references: [id])
+  session  CashSession? @relation(fields: [sessionId], references: [id])
+
+  @@index([createdAt])
+}
+
+model Expense {
+  id           Int             @id @default(autoincrement())
+  branchId     Int
+  employeeId   Int
+  sessionId    Int?
+  amount       Decimal
+  category     ExpenseCategory
+  description  String
+  receiptPhoto String?
+  createdAt    DateTime        @default(now())
+
+  branch   Branch       @relation(fields: [branchId], references: [id])
+  employee Employee     @relation(fields: [employeeId], references: [id])
+  session  CashSession? @relation(fields: [sessionId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ORDERS — Sales, Items, Shipping & Payments
+// ═══════════════════════════════════════════════════════════════
+
+model Order {
+  id          Int    @id @default(autoincrement())
+  customerId  Int
+  branchId    Int
+  sellerId    Int
+  orderNumber String @unique
+
+  // Financials
+  subtotal      Decimal @default(0)
+  shippingTotal Decimal @default(0)
+  discount      Decimal @default(0)
+  grandTotal    Decimal @default(0)
+
+  // Status
+  status        OrderStatus    @default(PENDING)
+  isPaid        Boolean        @default(false)
+  paymentMethod PaymentMethod?
+
+  // Logistics
+  isDelivery     Boolean         @default(false)
+  deliveryStatus DeliveryStatus? @default(NOT_REQUIRED)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  branch          Branch          @relation(fields: [branchId], references: [id])
+  seller          Employee        @relation("SellerRelation", fields: [sellerId], references: [id])
+  items           OrderItem[]
+  shippingDetails ShippingDetail?
+  payments        Payment[]
+  shipments       Shipment[]
+
+  @@index([branchId, status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          Int              @id @default(autoincrement())
+  orderId     Int
+  variantId   Int
+  quantity    Int
+  condition   ProductCondition?
+  skuSnapshot String?
+  unitPrice   Decimal
+  totalPrice  Decimal
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime?        @updatedAt
+
+  order   Order          @relation(fields: [orderId], references: [id])
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+}
+
+model ShippingDetail {
+  id                 Int                 @id @default(autoincrement())
+  orderId            Int                 @unique
+  paymentMode        ShippingPaymentMode
+  shippingCostPaidBy ShippingCostPayer?
+  destinationCity    String
+  destinationDept    String
+  carrierName        String?
+  trackingNumber     String?
+  receiverName       String?
+  receiverPhone      String?
+  shippingDate       DateTime?
+  receiptImage       String?
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  orderId       Int
+  amount        Decimal
+  paymentDate   DateTime      @default(now())
+  paymentMethod PaymentMethod
+  transactionId String?       @unique
+  status        PaymentStatus
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime?     @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model Shipment {
+  id             Int            @id @default(autoincrement())
+  orderId        Int
+  trackingNumber String?        @unique
+  carrier        String?
+  status         ShipmentStatus
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime?      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CUSTOMERS — Addresses, Reviews, Reservations & Cart
+// ═══════════════════════════════════════════════════════════════
+
+model Address {
+  id         Int       @id @default(autoincrement())
+  customerId Int
+  label      String?   // e.g. "Casa", "Oficina"
+  address1   String
+  address2   String?
+  city       String
+  state      String?
+  country    String
+  postalCode String
+  latitude   Float?
+  longitude  Float?
+  isDefault  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  reservations Reservation[]
+}
+
+model Review {
+  id         Int       @id @default(autoincrement())
+  productId  Int
+  customerId Int
+  rating     Int       // 1–5
+  title      String?
+  content    String?
+  isApproved Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+}
+
+model Reservation {
+  id         Int               @id @default(autoincrement())
+  customerId Int
+  variantId  Int
+  branchId   Int
+  status     ReservationStatus @default(PENDING)
+  expiresAt  DateTime
+  isDelivery Boolean           @default(false)
+
+  shippingAddressSnapshot String? // Free-text snapshot at reservation time
+  shippingAddressId       Int?    // Optional FK for reporting
+
+  notes       String?
+  updatedById Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  customer        Customer       @relation(fields: [customerId], references: [id])
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  branch          Branch         @relation(fields: [branchId], references: [id])
+  shippingAddress Address?       @relation(fields: [shippingAddressId], references: [id])
+  updatedBy       Employee?      @relation("ReservationUpdatedBy", fields: [updatedById], references: [id])
+}
+
+model CartItem {
+  id         Int       @id @default(autoincrement())
+  customerId Int
+  variantId  Int
+  quantity   Int       @default(1)
+  createdAt  DateTime  @default(now())
+  guestToken String?
+  expiresAt  DateTime?
+
+  customer Customer       @relation(fields: [customerId], references: [id])
+  variant  ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@unique([customerId, variantId])
+  @@index([customerId, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUPPLIERS — Suppliers, Purchases & Payments
+// ═══════════════════════════════════════════════════════════════
+
+model Supplier {
+  id            Int       @id @default(autoincrement())
+  firstName     String
+  lastName      String
+  phone         String?
+  email         String?
+  address       String?
+  city          String?
+  department    String?
+  country       String?
+  ci            String?   // Cédula de Identidad
   notes         String?
+  birthDate     DateTime?
+  partnerSince  DateTime?
+  contractEndAt DateTime?
+  isIndefinite  Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime? @updatedAt
 
-  tbusers       tbusers      @relation(fields: [FK_user], references: [PK_user])
-  tbproductvariants tbproductvariants? @relation(fields: [FK_productvariant], references: [PK_variant])
+  managers SupplierManager[]
+  branches SupplierBranch[]
+  purchases Purchase[]
 }
 
-//////////////////////////////
-// MOVIMIENTOS DE INVENTARIO (Entradas, Salidas, Ajustes)
-//////////////////////////////
+model SupplierManager {
+  id         Int      @id @default(autoincrement())
+  supplierId Int
+  employeeId Int
+  assignedAt DateTime @default(now())
 
-model tbstockmovements {
-  PK_movement     Int       @id @default(autoincrement())
-  FK_productvariant Int
-  FK_branch       Int
-  movementType    String    // Entrada, Salida, Ajuste
-  quantity        Int
-  reason          String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime? @updatedAt
-  actionHistory   Json?
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-  tbproductvariants tbproductvariants @relation(fields: [FK_productvariant], references: [PK_variant])
-  tbbranches       tbbranches         @relation(fields: [FK_branch], references: [PK_branch])
+  @@unique([supplierId, employeeId])
+  @@index([supplierId])
+  @@index([employeeId])
+}
+
+model SupplierBranch {
+  id         Int      @id @default(autoincrement())
+  supplierId Int
+  branchId   Int
+  assignedAt DateTime @default(now())
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, branchId])
+  @@index([supplierId])
+  @@index([branchId])
+}
+
+model Purchase {
+  id           Int            @id @default(autoincrement())
+  supplierId   Int
+  employeeId   Int
+  purchaseDate DateTime       @default(now())
+  totalItems   Int
+  totalAmount  Decimal
+  amountPaid   Decimal        @default(0)
+  amountOwed   Decimal        @default(0)
+  status       PurchaseStatus @default(PENDING)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime?      @updatedAt
+
+  supplier         Supplier          @relation(fields: [supplierId], references: [id])
+  employee         Employee          @relation(fields: [employeeId], references: [id])
+  stockMovements   StockMovement[]
+  warehouseEntries WarehouseEntry[]
+  payments         SupplierPayment[]
+
+  @@index([purchaseDate])
+}
+
+model SupplierPayment {
+  id         Int            @id @default(autoincrement())
+  purchaseId Int
+  employeeId Int
+  amount     Decimal
+  paymentDate DateTime      @default(now())
+  method     PaymentMethod?
+  notes      String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime?      @updatedAt
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SYSTEM — Audit Logs, Domain Events & Report Snapshots
+// ═══════════════════════════════════════════════════════════════
+
+model AuditLog {
+  id         Int            @id @default(autoincrement())
+  entity     String         // "Branch", "Employee", "Product", etc.
+  entityId   Int
+  action     AuditOperation
+  oldValue   String?        // JSON string
+  newValue   String?        // JSON string
+  employeeId Int?
+  createdAt  DateTime       @default(now())
+  ipAddress  String?
+  userAgent  String?
+
+  employee Employee? @relation(fields: [employeeId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([employeeId])
+  @@index([createdAt])
+}
+
+model DomainEvent {
+  id        Int      @id @default(autoincrement())
+  eventType String   // e.g. "OrderPaid", "StockAdjusted"
+  payload   String   // JSON string
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ReportSnapshot {
+  id          Int      @id @default(autoincrement())
+  reportType  String   // e.g. "SALES_DAILY", "INVENTORY_STATE"
+  data        String   // JSON string
+  generatedAt DateTime @default(now())
 }

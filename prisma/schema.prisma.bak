@@ -1,0 +1,1505 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════
+
+// RBAC
+enum RoleCode {
+  ADMIN
+  MANAGER
+  STAFF
+  MAINTENANCE
+}
+
+enum AccountType {
+  CUSTOMER
+  EMPLOYEE
+  BOTH
+}
+
+// People
+enum EmployeeStatus {
+  ACTIVE
+  DEACTIVATED
+  INACTIVE
+}
+
+enum ContractType {
+  INDEFINITE
+  TEMPORARY
+  SERVICES
+}
+
+enum ContributionType {
+  NONE
+  CONTRIBUTES
+  PAID
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum DeviceType {
+  POS
+  MOBILE
+  WEB
+  OTHER
+}
+
+// Orders & Payments
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  QR // QR
+  TRANSFER // TRANSFERENCIA
+}
+
+enum PayrollStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum PurchaseStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum ReservationStatus {
+  PENDING
+  EXPIRED
+  COMPLETED
+  ON_APPROVAL
+  SHIPPED
+}
+
+enum ExpenseCategory {
+  CLEANING
+  TRANSPORT
+  RENT
+  SALARY
+  SUPPLIES
+  OTHER
+}
+
+enum CashSessionStatus {
+  OPEN // OPEN
+  CLOSED // CLOSED
+}
+
+enum PaymentStatus {
+  PENDING // PENDIENTE
+  COMPLETED // COMPLETADO
+  CANCELLED // CANCELADO
+}
+
+enum ShipmentStatus {
+  PENDING // PENDIENTE
+  IN_TRANSIT_EN // EN_CAMINO
+  DELIVERED // ENTREGADO
+  CANCELLED // CANCELADO
+}
+
+enum EntryType {
+  PURCHASE // COMPRA
+  RETURN // DEVOLUCION
+  TRANSFER // TRASLADO
+  OTHER // OTRO
+}
+
+enum ProductStatus {
+  EXCELLENT // EXCELENTE
+  GOOD // BUENO
+  ACCEPTABLE // ACEPTABLE
+  DAMAGED // DANADO
+}
+
+enum ShippingCostPayer {
+  SENDER // REMITENTE (quien envía)
+  RECIPIENT // DESTINATARIO (quien recibe/paga en destino)
+}
+
+// Tipos de cuenta para controlar si la `tbauth` pertenece a empleado/cliente
+enum AccountType {
+  CUSTOMER
+  EMPLOYEE
+  BOTH
+}
+
+enum ContractType {
+  INDEFINIDO
+  TEMPORAL
+  SERVICIOS
+}
+
+// Planes y estado para `tbsubscriptions`
+enum SubscriptionPlan {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+}
+
+enum EmployeeStatus {
+  ACTIVE // ACTIVO - Trabajando normalmente
+  DEACTIVATED // DESACTIVADO - Temporalmente suspendido
+  INACTIVE // INACTIVO - Permanente (renuncia, despido)
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum ContributionType {
+  NONE // NO_CONTRIBUYE
+  CONTRIBUTES // CONTRIBUYE
+  PAID // PAGADO
+}
+
+// Dispositivos donde se registra la asistencia
+enum DeviceType {
+  POS
+  MOBILE
+  WEB
+  OTHER
+}
+
+// Categorías de flujo de caja para integridad
+enum CashFlowCategory {
+  SALE
+  RESERVATION
+  SHIPPING
+  TRANSPORT
+  SALARY
+  OTHER
+}
+
+// Modo de pago del envío: pago por adelantado o contra entrega
+enum ShippingPaymentMode {
+  PREPAID // PAGO_ANTICIPADO
+  COD // PAGO_EN_DESTINO (cash on delivery)
+}
+
+// Tipos de operaciones para auditoría
+enum AuditOperation {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+//////////////////////////////
+// privilegeS DE USUARIO Y USUARIOS
+//////////////////////////////
+
+model tbprivileges {
+  PK_privilege  Int       @id @default(autoincrement())
+  privilegeName String    @unique //Ingeniero de sistema
+  privilegeCode String    @unique //  SYS_IS
+  description   String?
+  createdAt     DateTime  @default(now())
+  FK_createdBy  Int? // Usuario que creó el privilegio
+  authAccounts  tbauth[]
+
+  // Relación de auditoría
+  createdBy tbemployee_profiles? @relation("PrivilegeCreatedBy", fields: [FK_createdBy], references: [PK_employee])
+}
+
+// EJEMPLO DE CODIGO DE PRIVILEGIOS
+//     "SYS_IS", Ingeniero de sistemas
+//     "SYS_AD", Administrador
+
+// Nota: `tbusers` eliminado. Identidad y perfiles están separados en `tbauth`,
+// `tbemployee_profiles` y `tbcustomer_profiles`.
+
+model tbauth {
+  PK_auth      Int         @id @default(autoincrement())
+  FK_company   Int? // Empresa a la que pertenece la cuenta (opcional, multi-tenancy)
+  FK_privilege Int
+  username     String      @unique
+  password     String
+  isActive     Boolean     @default(true)
+  lastLogin    DateTime?
+  accountType  AccountType @default(CUSTOMER)
+  createdAt    DateTime    @default(now())
+  FK_createdBy Int? // Usuario que creó la cuenta
+
+  employeeProfile tbemployee_profiles?
+  customerProfile tbcustomer_profiles?
+
+  privilege           tbprivileges          @relation(fields: [FK_privilege], references: [PK_privilege])
+  tbdevices           tbdevices?
+  tbpushsubscriptions tbpushsubscriptions[]
+  company             tbcompanies?          @relation(fields: [FK_company], references: [PK_company])
+
+  // Relación de auditoría
+  createdBy tbemployee_profiles? @relation("AuthCreatedBy", fields: [FK_createdBy], references: [PK_employee])
+}
+
+model tbemployee_profiles {
+  PK_employee Int  @id @default(autoincrement())
+  FK_auth     Int  @unique
+  FK_branch   Int?
+  FK_company  Int? // Empresa donde trabaja el empleado (soporta multi-tenancy)
+
+  // Datos Personales de Seguridad
+  firstName String
+  lastName  String
+  ci        String    @unique
+  phone     String?
+  birthDate DateTime?
+  birthYear Int?
+
+  // Datos Laborales y Seguridad
+  salary          Decimal         @default(0)
+  hireDate        DateTime        @default(now())
+  joinedAt        DateTime? // Fecha exacta de ingreso (además de hireDate)
+  contractEndAt   DateTime? // Hasta cuándo estará (nulo = indefinido)
+  contractType    ContractType    @default(INDEFINIDO)
+  contributionType ContributionType @default(NONE)
+  status          EmployeeStatus  @default(ACTIVE) // Estado del empleado
+  homeAddress     String?
+  deletedAt    DateTime? // Fecha de borrado lógico (soft-delete)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime?   @updatedAt // Fecha de última actualización
+  FK_createdBy Int? // Usuario que creó el perfil del empleado
+  FK_updatedBy Int? // Usuario que actualizó el perfil del empleado
+
+  // Configuraciones del sistema
+  theme         Theme?    @default(SYSTEM)
+  notifications Boolean?  @default(true)
+  language      String?   @default("es")
+
+  auth   tbauth      @relation(fields: [FK_auth], references: [PK_auth])
+  branch tbbranches? @relation(fields: [FK_branch], references: [PK_branch])
+
+  // Relaciones de control
+  cashSessions       tbcash_sessions[]
+  salesMade          tborders[]            @relation("SellerRelation")
+  attendance         tbattendances[]
+  shifts             tbshifts_schedule[]
+  warehouseEntries   tbwarehouse_entry[]
+  stockAdjustments   tbstock_adjustments[]
+  expenses           tbexpenses[]
+  payrolls           tbpayrolls[]
+  transfersSent      tbstock_transfers[]   @relation("SenderRelation")
+  transfersReceived  tbstock_transfers[]   @relation("ReceiverRelation")
+  company            tbcompanies?          @relation(fields: [FK_company], references: [PK_company])
+  tbaudit_logs       tbaudit_logs[]
+  tbcash_flows       tbcash_flows[]
+  tbreservations     tbreservations[]
+  tbpurchases        tbpurchases[]
+  tbpaymentsuppliers tbpaymentsuppliers[]
+
+  // Relación con proveedores asignados (muchos-a-muchos)
+  supplierManagers tbsupplier_managers[]
+
+  // Relación many-to-many con sucursales a través de tabla intermedia
+  managerBranches tbmanager_branches[]
+
+  // Relación many-to-many con warehouses a través de tabla intermedia
+  managerWarehouses tbmanager_warehouses[]
+
+  // Relaciones de auditoría para warehouses
+  warehousesCreated tbwarehouses[] @relation("WarehouseCreatedBy")
+  warehousesUpdated tbwarehouses[] @relation("WarehouseUpdatedBy")
+
+  // Relaciones de asignación
+  warehouseAssignments tbmanager_warehouses[] @relation("WarehouseAssignmentBy")
+  branchWarehouseAssignments tbwarehouse_branches[] @relation("BranchWarehouseAssignmentBy")
+
+  // Relaciones de auditoría para sucursales creadas/actualizadas
+  branchesCreated tbbranches[] @relation("BranchCreatedBy")
+  branchesUpdated tbbranches[] @relation("BranchUpdatedBy")
+
+  // Relaciones de auditoría para proveedores creados/actualizados
+  suppliersCreated tbsuppliers[] @relation("SupplierCreatedBy")
+  suppliersUpdated tbsuppliers[] @relation("SupplierUpdatedBy")
+
+  // Relaciones de auditoría para empresas y privilegios
+  companiesCreated tbcompanies[] @relation("CompanyCreatedBy")
+  privilegesCreated tbprivileges[] @relation("PrivilegeCreatedBy")
+  authAccountsCreated tbauth[] @relation("AuthCreatedBy")
+
+  // Relación de auditoría para el propio perfil
+  createdBy tbemployee_profiles? @relation("EmployeeCreatedBy", fields: [FK_createdBy], references: [PK_employee])
+  employeesCreated tbemployee_profiles[] @relation("EmployeeCreatedBy")
+  updatedBy tbemployee_profiles? @relation("EmployeeUpdatedBy", fields: [FK_updatedBy], references: [PK_employee])
+  employeesUpdated tbemployee_profiles[] @relation("EmployeeUpdatedBy")
+}
+
+model tbcustomer_profiles {
+  PK_customer Int     @id @default(autoincrement())
+  FK_auth     Int?    @unique
+  // Datos básicos (se llenan en el checkout aunque no tenga cuenta)
+  firstName   String
+  lastName    String?
+  phone       String? @unique
+  email       String? @unique // Agregado @unique para identificar invitados recurrentes
+
+  // Datos de Envío y Marketing
+  city        String?
+  department  String?
+  homeAddress String?
+  googleMaps  String?
+
+  customerLevel String    @default("NUEVO")
+  totalSpent    Decimal   @default(0)
+  ordersCount   Int       @default(0)
+  deletedAt     DateTime? // Fecha de borrado lógico (soft-delete) para preservar historial
+
+  // NUEVO: Para saber si es un cliente real o solo alguien que pasó por el checkout
+  isGuest Boolean @default(true)
+
+  auth           tbauth?          @relation(fields: [FK_auth], references: [PK_auth])
+  tborders       tborders[]
+  tbaddresses    tbaddresses[]
+  tbreviews      tbreviews[]
+  tbreservations tbreservations[]
+  tbcart_items   tbcart_items[]
+}
+
+model tbcash_sessions {
+  PK_session  Int @id @default(autoincrement())
+  FK_branch   Int
+  FK_employee Int // FK al empleado de turno (tbemployee_profiles.PK_employee)
+
+  openingAmount  Decimal  @default(0) // Con cuánto recibe la caja (el "cambio")
+  expectedAmount Decimal  @default(0) // Calculado: opening + ventas - gastos
+  realAmount     Decimal? // Lo que ella cuenta físicamente al irse
+
+  // Totales para facilitar la vista rápida
+  totalCash     Decimal @default(0)
+  totalQr       Decimal @default(0)
+  totalTransfer Decimal @default(0)
+
+  status CashSessionStatus @default(OPEN)
+
+  openedAt DateTime  @default(now())
+  closedAt DateTime?
+
+  notes String? // Ej: "Dejo 50 bs en monedas para la tarde"
+
+  // Relaciones
+  branch     tbbranches          @relation(fields: [FK_branch], references: [PK_branch])
+  employee   tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+  cashFlows  tbcash_flows[] // Todos los movimientos de este turno
+  tbexpenses tbexpenses[]
+  sessionActions tbcash_session_actions[] // Historial de acciones normalizado
+
+  @@unique([FK_branch, status]) // Asegura al menos una sola sesión por sucursal+estado (evita dos cajas OPEN)
+}
+
+// DISPOSITIVOS
+
+model tbdevices {
+  PK_device Int       @id @default(autoincrement())
+  FK_auth   Int       @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+  tbauth    tbauth    @relation(fields: [FK_auth], references: [PK_auth])
+  deviceDetails tbdevice_details[] // Detalles de dispositivos normalizados
+}
+
+// NOTIFICACIONES
+
+model tbpushsubscriptions {
+  PK_pushsubscription Int       @id @default(autoincrement())
+  FK_auth             Int
+  endpoint            String    @unique
+  auth                String
+  p256dh              String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime?
+
+  tbauth tbauth @relation(fields: [FK_auth], references: [PK_auth])
+}
+
+//////////////////////////////
+// SUCURSALES
+//////////////////////////////
+
+model tbbranches {
+  PK_branch    Int       @id @default(autoincrement())
+  FK_company   Int? // Empresa propietaria (Multi-tenancy: compañía/franquicia)
+  name         String // Ej: "Tienda Centro" - Solo puntos de venta
+  FK_owner     Int? // Quién es el dueño de esta sucursal (si hay varios)
+  phone        String?
+  address      String
+  city         String
+  department   String?
+  country      String? // País de la sucursal
+  latitude     Float?
+  longitude    Float?
+  openedAt     DateTime? // Fecha de apertura de la sucursal
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt // Fecha de última actualización
+  FK_createdBy Int? // Usuario que creó la sucursal
+  FK_updatedBy Int? // Usuario que actualizó la sucursal
+
+  tbinventories       tbinventories[]
+  // Relaciones para transferencias
+  transfersFrom       tbstock_transfers[]   @relation("OriginBranch")
+  transfersTo         tbstock_transfers[]   @relation("DestinationBranch")
+  company             tbcompanies?          @relation(fields: [FK_company], references: [PK_company])
+  tbemployee_profiles tbemployee_profiles[]
+  tbcash_sessions     tbcash_sessions[]
+  tbbranchspecialdays tbbranchspecialdays[]
+  tbbranch_hours      tbbranch_hours[]
+  tbstock_adjustments tbstock_adjustments[]
+  tbwarehouse_entry   tbwarehouse_entry[]
+  tbcash_flows        tbcash_flows[]
+  tbreservations      tbreservations[]
+  tbstockmovements    tbstockmovements[]
+  tbshifts_schedule   tbshifts_schedule[]
+  tbexpenses          tbexpenses[]
+
+  // Relación many-to-many con managers a través de tabla intermedia
+  managerBranches tbmanager_branches[]
+
+  // Relación many-to-many con proveedores a través de tabla intermedia
+  supplierBranches tbsupplier_branches[]
+
+  // Relación many-to-many con warehouses que la sirven
+  warehouseBranches tbwarehouse_branches[]
+
+  // Relaciones de auditoría
+  createdBy tbemployee_profiles? @relation("BranchCreatedBy", fields: [FK_createdBy], references: [PK_employee])
+  updatedBy tbemployee_profiles? @relation("BranchUpdatedBy", fields: [FK_updatedBy], references: [PK_employee])
+}
+
+//////////////////////////////
+// BODEGAS (WAREHOUSES) - ENTIDAD COMPLETAMENTE SEPARADA
+//////////////////////////////
+
+model tbwarehouses {
+  PK_warehouse Int       @id @default(autoincrement())
+  FK_company   Int? // Empresa propietaria (Multi-tenancy)
+  name         String // Ej: "Bodega Central Norte"
+  phone        String?
+  address      String
+  city         String
+  department   String?
+  country      String?
+  openedAt     DateTime? // Fecha de apertura de la bodega
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+  FK_createdBy Int? // Usuario que creó la bodega
+  FK_updatedBy Int? // Usuario que actualizó la bodega
+
+  // Relaciones
+  company tbcompanies? @relation(fields: [FK_company], references: [PK_company])
+
+  // Relación many-to-many con managers (managers asignados a warehouses)
+  managerWarehouses tbmanager_warehouses[]
+
+  // Relación many-to-many con branches (warehouses sirven a branches)
+  warehouseBranches tbwarehouse_branches[]
+
+  // Relaciones de inventario y movimientos (TODO: implementar)
+  // warehouseEntries tbwarehouse_entry[]
+  // stockAdjustments tbstock_adjustments[]
+
+  // Relaciones de auditoría
+  createdBy tbemployee_profiles? @relation("WarehouseCreatedBy", fields: [FK_createdBy], references: [PK_employee])
+  updatedBy tbemployee_profiles? @relation("WarehouseUpdatedBy", fields: [FK_updatedBy], references: [PK_employee])
+}
+
+//////////////////////////////
+// MANAGERS ASIGNADOS A BODEGAS (MANY-TO-MANY)
+//////////////////////////////
+
+model tbmanager_warehouses {
+  PK_manager_warehouse Int @id @default(autoincrement())
+  FK_employee          Int // Manager
+  FK_warehouse         Int // Warehouse asignada
+  assignedAt           DateTime @default(now())
+  FK_assignedBy        Int? // Quién asignó
+
+  // Relaciones
+  manager   tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+  warehouse tbwarehouses        @relation(fields: [FK_warehouse], references: [PK_warehouse])
+  assignedBy tbemployee_profiles? @relation("WarehouseAssignmentBy", fields: [FK_assignedBy], references: [PK_employee])
+
+  @@unique([FK_employee, FK_warehouse]) // Un manager solo puede estar asignado una vez a una warehouse
+}
+
+//////////////////////////////
+// BODEGAS QUE SIRVEN A SUCURSALES (MANY-TO-MANY)
+//////////////////////////////
+
+model tbwarehouse_branches {
+  PK_warehouse_branch Int @id @default(autoincrement())
+  FK_warehouse        Int // Warehouse que sirve
+  FK_branch           Int // Branch que recibe servicio
+  isPrimary           Boolean @default(false) // Si es la warehouse primaria para esta branch
+  assignedAt          DateTime @default(now())
+  FK_assignedBy       Int? // Quién asignó
+
+  // Relaciones
+  warehouse tbwarehouses @relation(fields: [FK_warehouse], references: [PK_warehouse])
+  branch    tbbranches   @relation(fields: [FK_branch], references: [PK_branch])
+  assignedBy tbemployee_profiles? @relation("BranchWarehouseAssignmentBy", fields: [FK_assignedBy], references: [PK_employee])
+
+  @@unique([FK_warehouse, FK_branch]) // Una warehouse solo puede servir una vez a una branch
+}
+
+// HORARIOS DE DIAS ESPECIALES DE LA SUCURSAL
+
+model tbbranchspecialdays {
+  PK_specialday Int       @id @default(autoincrement())
+  FK_branch     Int
+  date          DateTime // Fecha exacta (solo fecha, sin hora)
+  isClosed      Boolean   @default(false) // Si la sucursal está cerrada todo el día
+  openingTime   String? // "09:00" - solo si no está cerrado todo el día
+  closingTime   String? // "18:00" - solo si no está cerrado todo el día
+  notes         String? // Comentarios o motivo (p.ej. "Feriado nacional")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime?
+
+  tbbranches tbbranches @relation(fields: [FK_branch], references: [PK_branch])
+}
+
+//////////////////////////////
+// HORARIOS DE SUCURSALES (NORMALIZACIÓN - reemplaza openingHours Json)
+//////////////////////////////
+
+model tbbranch_hours {
+  PK_branch_hour Int       @id @default(autoincrement())
+  FK_branch      Int
+  day_of_week    Int       // 0=Domingo, 1=Lunes, 2=Martes, 3=Miércoles, 4=Jueves, 5=Viernes, 6=Sábado
+  opening_time   String?   // "09:00"
+  closing_time   String?   // "18:00"
+  is_closed      Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime?
+
+  branch tbbranches @relation(fields: [FK_branch], references: [PK_branch])
+
+  @@unique([FK_branch, day_of_week]) // Una sucursal tiene un horario por día
+}
+
+//////////////////////////////
+// HISTORIAL DE ACCIONES DE SESIONES DE CAJA (NORMALIZACIÓN - reemplaza actionHistory Json)
+//////////////////////////////
+
+model tbcash_session_actions {
+  PK_action  Int            @id @default(autoincrement())
+  FK_session Int
+  action     String         // "OPEN", "CLOSE", "EXPENSE", "SALE"
+  amount     Decimal?
+  details    String?
+  createdAt  DateTime       @default(now())
+
+  session tbcash_sessions @relation(fields: [FK_session], references: [PK_session])
+}
+
+//////////////////////////////
+// DETALLES DE DISPOSITIVOS (NORMALIZACIÓN - reemplaza devices Json)
+//////////////////////////////
+
+model tbdevice_details {
+  PK_device_detail Int       @id @default(autoincrement())
+  FK_device        Int
+  device_type      String    // "mobile", "desktop", "tablet"
+  browser          String?
+  os               String?
+  user_agent       String?
+  ip_address       String?
+  last_seen        DateTime  @default(now())
+
+  device tbdevices @relation(fields: [FK_device], references: [PK_device])
+}
+
+// Asistencia
+
+model tbattendances {
+  PK_attendance Int                 @id @default(autoincrement())
+  FK_employee   Int
+  date          String //Fecha 
+  checkIn       DateTime
+  checkOut      DateTime?
+  device        DeviceType // Dispositivo del cual se toma la asistencia
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime
+  employee      tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+}
+
+model tbpayrolls {
+  PK_payroll  Int           @id @default(autoincrement())
+  FK_employee Int
+  periodStart DateTime
+  periodEnd   DateTime
+  baseSalary  Decimal
+  bonuses     Decimal?
+  deductions  Decimal?
+  netSalary   Decimal
+  status      PayrollStatus @default(PENDING) // Pagado, Pendiente
+  paymentDate DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime?     @updatedAt
+
+  employee tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+}
+
+// GENERO
+model tbgenders {
+  PK_gender Int       @id @default(autoincrement())
+  gender    String    @unique // Ej: Hombre, Mujer, Niño, Unisex
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+
+  tbcategories tbcategories[] // Relación 1:N (un género muchas categorías)
+  tbproducts   tbproducts[]
+}
+
+//////////////////////////////
+// CATEGORÍAS Y ATRIBUTOS (para productos tipo ropa, zapatos, etc)
+//////////////////////////////
+
+model tbcategories {
+  PK_category Int @id @default(autoincrement())
+  FK_gender   Int // Relación con el género (Hombre, Mujer, etc.)
+
+  // --- EL AJUSTE PARA SUB-CATEGORÍAS ---
+  FK_parent   Int? // Si es nulo, es una categoría principal (ej. Ropa)
+  category    String
+  slug        String  @unique // URL unico en minuscula y con "-" como separador
+  description String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+
+  // Relaciones
+  tbgenders tbgenders @relation(fields: [FK_gender], references: [PK_gender])
+
+  // Relación recursiva (Auto-relación)
+  parent        tbcategories?  @relation("SubCategories", fields: [FK_parent], references: [PK_category])
+  subCategories tbcategories[] @relation("SubCategories")
+
+  tbproductcategories tbproductcategories[]
+}
+
+model tbattributes {
+  PK_attribute Int       @id @default(autoincrement())
+  attribute    String // Ej: Color, Talla, Material
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+
+  tbattributevalues tbattributevalues[]
+}
+
+model tbattributevalues {
+  PK_value     Int       @id @default(autoincrement())
+  FK_attribute Int
+  value        String // Ej: Rojo, M, Algodón
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+
+  tbattributes        tbattributes          @relation(fields: [FK_attribute], references: [PK_attribute])
+  tbvariantattributes tbvariantattributes[]
+}
+
+//////////////////////////////
+// CATÁLOGOS PARA PRENDAS
+//////////////////////////////
+
+model tbbrands {
+  PK_brand   Int          @id @default(autoincrement())
+  brandName  String       @unique // Ej: Zara, H&M, Marca Local
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime?    @updatedAt
+  tbproducts tbproducts[]
+}
+
+model tbseasons {
+  PK_season  Int          @id @default(autoincrement())
+  seasonName String       @unique // Ej: Verano 2024, Invierno 2025
+  createdAt  DateTime     @default(now())
+  tbproducts tbproducts[]
+}
+
+//////////////////////////////
+// PRODUCTOS Y VARIANTES
+//////////////////////////////
+
+model tbproducts {
+  PK_product Int  @id @default(autoincrement())
+  FK_brand   Int? // Relación con Marcas
+  FK_season  Int? // Relación con Temporadas
+  FK_company Int? // Empresa propietaria del producto (multi-tenancy)
+  FK_gender  Int // Relación con tbgenders (Hombre, Mujer, etc.)
+
+  sku         String  @unique
+  name        String // Título de la prenda
+  slug        String  @unique
+  description String?
+
+  // Especificaciones técnicas de la prenda
+  fabricType  String? // Tipo de Tela (Seda, Algodón, Licra)
+  composition String? // Ej: 90% Algodón, 10% Poliéster
+  careNotes   String? // Instrucciones de lavado
+
+  isActive  Boolean   @default(true)
+  deletedAt DateTime? // Fecha de borrado lógico (soft-delete) para preservación histórica
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  // Relaciones
+  tbbrands  tbbrands?  @relation(fields: [FK_brand], references: [PK_brand])
+  tbseasons tbseasons? @relation(fields: [FK_season], references: [PK_season])
+  tbgenders tbgenders  @relation(fields: [FK_gender], references: [PK_gender])
+
+  tbinventories       tbinventories[]
+  tbproductcategories tbproductcategories[]
+  tbproductvariants   tbproductvariants[]
+  company             tbcompanies?          @relation(fields: [FK_company], references: [PK_company])
+  tbreviews           tbreviews[]
+
+  // Índices de performance para consultas comunes
+  @@index([FK_brand, FK_season, isActive])
+  @@index([slug])
+}
+
+model tbproductcategories {
+  PK_productcategory Int @id @default(autoincrement())
+  FK_product         Int
+  FK_category        Int
+
+  tbproducts   tbproducts   @relation(fields: [FK_product], references: [PK_product])
+  tbcategories tbcategories @relation(fields: [FK_category], references: [PK_category])
+}
+
+model tbproductvariants {
+  PK_variant    Int       @id @default(autoincrement())
+  FK_product    Int
+  sku           String    @unique
+  price         Decimal?  // Precision intent: 12,2
+  imageUrl      String? // URL de Cloudflare R2 / Images
+  isPublished   Boolean   @default(false)
+  featured      Boolean   @default(false) // Para destacar en ecommerce
+  discountPrice Decimal? // Precio en oferta para mostrar en ecommerce
+  publishDate   DateTime? // Para el lanzamiento de las 9:00 PM
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime? // Fecha de borrado lógico (soft-delete) para la variante
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime? @updatedAt
+
+  tbproducts          tbproducts            @relation(fields: [FK_product], references: [PK_product])
+  tbvariantattributes tbvariantattributes[]
+  tbprice_history     tbprice_history[]
+  tbstock_adjustments tbstock_adjustments[]
+  tbinventories       tbinventories[]
+  tbwarehouse_entry   tbwarehouse_entry[]
+  tbstock_transfers   tbstock_transfers[]
+  tborderitems        tborderitems[]
+  tbreservations      tbreservations[]
+  tbstockmovements    tbstockmovements[]
+  tbcart_items        tbcart_items[]
+
+  // Índices de performance adicionales
+  @@index([FK_product, isPublished, isActive])
+  @@index([sku])
+  @@index([isPublished, featured, isActive])
+}
+
+//////////////////////////////
+// MULTI-TENANCY: Compañías
+// Tabla de empresas/compañías (soporta franquicias o multi-empresa)
+model tbcompanies {
+  PK_company Int      @id @default(autoincrement())
+  name       String // Nombre comercial de la empresa
+  slug       String   @unique
+  taxId      String? // NIT/CUIT/CI del contribuyente
+  taxIdPath  String? // Ruta o URL del documento NIT
+  businessName  String? // Razón social
+  fiscalAddress String? // Dirección fiscal
+  country    String? // País de operación
+  department String? // Departamento o región
+  commerceType String? // Tipo de comercio (Ropa usada, Accesorios, etc.)
+  description String? // Descripción breve del comercio
+  vision     String? // Visión del negocio
+  mission    String? // Misión del negocio
+  openedAt   DateTime? // Fecha de apertura física de la empresa
+
+  // Términos y aceptación legal
+  tosRead     Boolean  @default(false)
+  tosReadAt   DateTime?
+  tosAccepted Boolean  @default(false)
+  tosAcceptedAt DateTime?
+  tosAcceptedIp String?
+  tosAcceptedUa String?
+
+  createdAt  DateTime @default(now())
+  FK_createdBy Int? // Usuario que creó la empresa
+
+  // Relaciones: sucursales, usuarios, empleados, productos
+  branches        tbbranches[]
+  warehouses      tbwarehouses[]
+  authAccounts    tbauth[]
+  employees       tbemployee_profiles[]
+  products        tbproducts[]
+  suppliers       tbsuppliers[]
+  tbsubscriptions tbsubscriptions?
+  tbaudit_logs    tbaudit_logs[] // Relación con logs de auditoría
+
+  // Relación de auditoría
+  createdBy tbemployee_profiles? @relation("CompanyCreatedBy", fields: [FK_createdBy], references: [PK_employee])
+
+  @@unique([name])
+}
+
+// Suscripciones y planes por compañía
+model tbsubscriptions {
+  PK_subscription Int                @id @default(autoincrement())
+  FK_company      Int                @unique
+  planType        SubscriptionPlan
+  status          SubscriptionStatus
+  nextBillingDate DateTime
+
+  company tbcompanies @relation(fields: [FK_company], references: [PK_company])
+}
+
+//////////////////////////////
+// HISTORIAL DE CONFIGURACIÓN DE COMPAÑÍA
+// Registra cambios en settings críticos para auditoría y rollback
+model tbcompany_settings_history {
+  PK_history   Int      @id @default(autoincrement())
+  FK_company   Int
+  FK_changedBy Int? // Empleado que realizó el cambio
+  changedAt    DateTime @default(now())
+  oldValues    Json? // Valores anteriores
+  newValues    Json? // Valores nuevos
+  reason       String? // Motivo del cambio
+  changeType   String   @default("UPDATE") // UPDATE, ROLLBACK, etc.
+
+  @@index([FK_company])
+  @@index([changedAt])
+}
+
+//////////////////////////////
+// AUDITORÍA CENTRALIZADA
+// Logs de auditoría para trazabilidad legal e investigación
+model tbaudit_logs {
+  PK_log      Int            @id @default(autoincrement())
+  entity      String // "BRANCH", "EMPLOYEE", "PRODUCT", etc.
+  entityId    Int // ID de la entidad afectada
+  action      AuditOperation // CREATE, UPDATE, DELETE
+  oldValue    Json?
+  newValue    Json?
+  FK_employee Int? // Empleado que hizo la acción (si aplica)
+  FK_company  Int? // Empresa del contexto (multi-tenancy)
+  createdAt   DateTime @default(now())
+  ipAddress   String? // Dirección IP del usuario
+  userAgent   String? // User agent del navegador/dispositivo
+
+  // Relaciones
+  employee tbemployee_profiles? @relation(fields: [FK_employee], references: [PK_employee])
+  company  tbcompanies?         @relation(fields: [FK_company], references: [PK_company])
+
+  @@index([entity, entityId])
+  @@index([FK_employee])
+  @@index([createdAt])
+}
+
+//////////////////////////////
+// PERMISOS FINOS (granular)
+// Permisos independientes que se asignan a privilegios/roles
+model tbpermissions {
+  PK_permission Int    @id @default(autoincrement())
+  code          String @unique // Ej: INVENTORY_EDIT
+  description   String // Descripción legible del permiso
+}
+
+// Tabla pivote para relación many-to-many entre privilegios y permisos
+model tbprivilege_permissions {
+  FK_privilege  Int
+  FK_permission Int
+
+  @@id([FK_privilege, FK_permission])
+}
+
+//////////////////////////////
+// EVENTOS DE DOMINIO (cola / integración)
+// Modela eventos para procesar integraciones/colas/async
+model tbdomain_events {
+  PK_event  Int      @id @default(autoincrement())
+  eventType String // Ej: OrderPaid, StockAdjusted
+  payload   Json // Carga útil del evento
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+//////////////////////////////
+// SNAPSHOTS PARA REPORTES (data-warehouse light)
+// Guarda instantáneas de reportes para desacoplar consultas pesadas
+model tbreport_snapshots {
+  PK_snapshot Int      @id @default(autoincrement())
+  reportType  String // Ej: SALES_DAILY, INVENTORY_STATE
+  data        Json // JSON con el payload del reporte
+  generatedAt DateTime @default(now())
+}
+
+model tbprice_history {
+  PK_price   Int       @id @default(autoincrement())
+  FK_variant Int
+  price      Decimal // Precision intent: 12,2
+  validFrom  DateTime  @default(now())
+  validTo    DateTime?
+  reason     String?
+  createdAt  DateTime  @default(now())
+
+  variant tbproductvariants @relation(fields: [FK_variant], references: [PK_variant])
+}
+
+model tbvariantattributes {
+  PK_variantattribute Int @id @default(autoincrement())
+  FK_variant          Int
+  FK_attributevalue   Int
+
+  tbproductvariants tbproductvariants @relation(fields: [FK_variant], references: [PK_variant])
+  tbattributevalues tbattributevalues @relation(fields: [FK_attributevalue], references: [PK_value])
+}
+
+//////////////////////////////
+// CONTROL DE DAÑOS Y AJUSTES (Sugerencia 3)
+//////////////////////////////
+
+model tbstock_adjustments {
+  PK_adjustment Int @id @default(autoincrement())
+  FK_variant    Int
+  FK_branch     Int // Dónde ocurrió el daño/ajuste
+  FK_employee   Int // Quién reporta el daño (empleado)
+
+  quantity       Int // Cantidad afectada (negativa si se pierde)
+  adjustmentType AdjustmentType
+  reason         String? // Nota detallada: "Se rompió el cierre en probador"
+
+  createdAt     DateTime @default(now())
+  actionHistory Json?
+
+  variant  tbproductvariants   @relation(fields: [FK_variant], references: [PK_variant])
+  branch   tbbranches          @relation(fields: [FK_branch], references: [PK_branch])
+  employee tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+}
+
+//////////////////////////////
+// INVENTARIO POR SUCURSAL Y VARIANTE DE PRODUCTO
+//////////////////////////////
+
+model tbinventories {
+  PK_inventory      Int       @id @default(autoincrement())
+  FK_productvariant Int
+  FK_branch         Int // Aquí sabrás cuánto hay en Bodega X y cuánto en Tienda Y
+  quantity          Int       @default(0)
+  reserved          Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime? @updatedAt
+
+  tbproductvariants    tbproductvariants @relation(fields: [FK_productvariant], references: [PK_variant])
+  tbbranches           tbbranches        @relation(fields: [FK_branch], references: [PK_branch])
+  tbproducts           tbproducts?       @relation(fields: [tbproductsPK_product], references: [PK_product])
+  tbproductsPK_product Int?
+
+  @@unique([FK_productvariant, FK_branch]) // Evita duplicar filas para el mismo producto en la misma sucursal
+}
+
+//////////////////////////////
+// SUCURSALES Y BODEGAS - Procesamiento y Transferencias
+//////////////////////////////
+
+model tbwarehouse_entry {
+  PK_entry              Int  @id @default(autoincrement())
+  FK_purchase           Int?
+  FK_employee_processor Int
+  FK_productvariant     Int
+  FK_branch_location    Int
+
+  barCode   String    @unique
+  costPrice Decimal?
+  salePrice Decimal
+  entryType EntryType @default(PURCHASE)
+
+  productStatus ProductStatus @default(EXCELLENT)
+  notes         String?
+
+  // CAMPOS DE TIEMPO (Indispensables)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  // Tu campo de historial para auditoría familiar
+
+  // Relaciones
+  tbpurchases         tbpurchases?        @relation(fields: [FK_purchase], references: [PK_purchase])
+  tbemployee_profiles tbemployee_profiles @relation(fields: [FK_employee_processor], references: [PK_employee])
+  tbproductvariants   tbproductvariants   @relation(fields: [FK_productvariant], references: [PK_variant])
+  tbbranches          tbbranches          @relation(fields: [FK_branch_location], references: [PK_branch])
+
+  @@index([createdAt])
+}
+
+model tbstock_transfers {
+  PK_transfer          Int  @id @default(autoincrement())
+  FK_variant           Int
+  FK_origin            Int // Siempre debe ser una sucursal donde isWarehouse = true
+  FK_destination       Int // Puede ser otra bodega o una tienda final
+  FK_employee_sender   Int // Encargado de bodega que despacha
+  FK_employee_receiver Int? // Quién recibió en la otra tienda (opcional)
+
+  quantity         Int
+  quantityReceived Int? // Cantidad informada como recibida en destino (uso para detectar pérdidas)
+  status           ShipmentStatus @default(IN_TRANSIT_EN) // Enviado, Recibido, Cancelado
+  notes            String? // Ej: "Se enviaron 2 de más por error"
+  sentAt           DateTime       @default(now())
+  receivedAt       DateTime?
+
+  origin      tbbranches           @relation("OriginBranch", fields: [FK_origin], references: [PK_branch])
+  destination tbbranches           @relation("DestinationBranch", fields: [FK_destination], references: [PK_branch])
+  variant     tbproductvariants    @relation(fields: [FK_variant], references: [PK_variant])
+  sender      tbemployee_profiles  @relation("SenderRelation", fields: [FK_employee_sender], references: [PK_employee])
+  receiver    tbemployee_profiles? @relation("ReceiverRelation", fields: [FK_employee_receiver], references: [PK_employee])
+}
+
+model tbcash_flows {
+  PK_cashflow Int               @id @default(autoincrement())
+  FK_branch   Int // A qué caja pertenece (Bodega, Tienda A, Tienda B)
+  FK_employee Int // Empleado que recibió/elaboró el movimiento
+  FK_session  Int? // Vínculo opcional a la sesión de caja
+  amount      Decimal
+  type        CashFlowDirection // "IN" (Ingreso), "OUT" (Egreso/Pasajes/Sueldo)
+  method      PaymentMethod // "CASH", "QR", "TRANSFER"
+  category    CashFlowCategory // "VENTA", "RESERVA", "ENVIO", "PASAJES", "SUELDO"
+  description String?
+  createdAt   DateTime          @default(now())
+
+  // Relaciones
+  session    tbcash_sessions?    @relation(fields: [FK_session], references: [PK_session])
+  tbbranches tbbranches          @relation(fields: [FK_branch], references: [PK_branch])
+  employee   tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+
+  @@index([createdAt])
+}
+
+//////////////////////////////
+// PEDIDOS Y ITEMS
+//////////////////////////////
+
+model tborders {
+  PK_order    Int    @id @default(autoincrement())
+  FK_customer Int // Cliente (tbcustomer_profiles.PK_customer)
+  FK_branch   Int // Sucursal donde se cierra la venta
+  FK_seller   Int // Empleado que atendió (tbemployee_profiles.PK_employee)
+  orderNumber String @unique
+
+  // FINANZAS (Uso Decimal para precisión)
+  subtotal      Decimal @default(0) // Suma de prendas
+  shippingTotal Decimal @default(0) // Costo del envío (si lo pagan acá)
+  discount      Decimal @default(0)
+  grandTotal    Decimal @default(0) // Subtotal + Shipping - Discount
+
+  // ESTADOS
+  status        OrderStatus    @default(PENDING)
+  isPaid        Boolean        @default(false)
+  paymentMethod PaymentMethod?
+
+  // LOGÍSTICA
+  isDelivery     Boolean         @default(false) // ¿Requiere envío?
+  deliveryStatus DeliveryStatus? @default(NOT_REQUIRED)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime? @updatedAt
+
+  // Relaciones
+  customer           tbcustomer_profiles @relation(fields: [FK_customer], references: [PK_customer])
+  seller             tbemployee_profiles @relation("SellerRelation", fields: [FK_seller], references: [PK_employee])
+  tborderitems       tborderitems[]
+  tbshipping_details tbshipping_details?
+  tbpayments         tbpayments[]
+  tbshipments        tbshipments[]
+
+  @@index([FK_branch, status])
+  @@index([createdAt])
+}
+
+model tbshipping_details {
+  PK_shipping        Int                 @id @default(autoincrement())
+  FK_order           Int                 @unique
+  // Lógica Bolivia: ¿Quién paga?
+  paymentMode        ShippingPaymentMode // "PAGO_ANTICIPADO" (acá) o "PAGO_EN_DESTINO" (allá)
+  shippingCostPaidBy ShippingCostPayer? // Quién paga el costo de envío: REMITENTE / DESTINATARIO
+
+  destinationCity String
+  destinationDept String
+  carrierName     String? // Flota, Radio Móvil, etc.
+  trackingNumber  String? // Nro de guía o foto de la ficha
+  receiverName    String? // Quién recibe allá
+  receiverPhone   String?
+
+  shippingDate DateTime?
+  receiptImage String? // URL de la foto de la guía (Cloudflare)
+
+  tborders tborders @relation(fields: [FK_order], references: [PK_order])
+}
+
+model tborderitems {
+  PK_orderitem      Int            @id @default(autoincrement())
+  FK_order          Int
+  FK_productvariant Int
+  quantity          Int
+  productStatus     ProductStatus? // Estado de la prenda al momento de la venta (ej: EXCELLENT, DAMAGED)
+  skuSnapshot       String? // SKU/identificador guardado como snapshot para evitar disputas futuras
+  unitPrice         Decimal
+  totalPrice        Decimal
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime?      @updatedAt
+
+  tborders          tborders          @relation(fields: [FK_order], references: [PK_order])
+  tbproductvariants tbproductvariants @relation(fields: [FK_productvariant], references: [PK_variant])
+}
+
+//////////////////////////////
+// DIRECCIONES DE USUARIO
+//////////////////////////////
+
+model tbaddresses {
+  PK_address     Int                 @id @default(autoincrement())
+  FK_customer    Int
+  label          String? // Casa, Oficina, etc.
+  address1       String
+  address2       String?
+  city           String
+  state          String?
+  country        String
+  postalCode     String
+  latitude       Float?
+  longitude      Float?
+  isDefault      Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime?           @updatedAt
+  customer       tbcustomer_profiles @relation(fields: [FK_customer], references: [PK_customer])
+  tbreservations tbreservations[]
+}
+
+//////////////////////////////
+// PAGOS
+//////////////////////////////
+
+model tbpayments {
+  PK_payment    Int           @id @default(autoincrement())
+  FK_order      Int
+  amount        Decimal
+  paymentDate   DateTime      @default(now())
+  paymentMethod PaymentMethod
+  transactionId String?       @unique
+  status        PaymentStatus
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime?     @updatedAt
+
+  tborders tborders @relation(fields: [FK_order], references: [PK_order])
+}
+
+//////////////////////////////
+// ENVIOS Y SEGUIMIENTO
+//////////////////////////////
+
+model tbshipments {
+  PK_shipment    Int            @id @default(autoincrement())
+  FK_order       Int
+  trackingNumber String?        @unique
+  carrier        String?
+  status         ShipmentStatus
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime?      @updatedAt
+
+  tborders tborders @relation(fields: [FK_order], references: [PK_order])
+}
+
+//////////////////////////////
+// RESEÑAS DE PRODUCTOS
+//////////////////////////////
+
+model tbreviews {
+  PK_review   Int       @id @default(autoincrement())
+  FK_product  Int
+  FK_customer Int
+  rating      Int // 1 a 5
+  title       String?
+  content     String?
+  isApproved  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  tbproducts tbproducts          @relation(fields: [FK_product], references: [PK_product])
+  customer   tbcustomer_profiles @relation(fields: [FK_customer], references: [PK_customer])
+}
+
+//////////////////////////////
+// RESERVAS (para productos o servicios)
+//////////////////////////////
+
+model tbreservations {
+  PK_reservation Int               @id @default(autoincrement())
+  FK_customer    Int
+  FK_variant     Int
+  FK_branch      Int // ¿Desde qué sucursal se hizo la reserva o salió a casa?
+  status         ReservationStatus @default(PENDING) // PENDING, EXPIRED, COMPLETED, ON_APPROVAL, SHIPPED
+
+  // LOGICA DE TIEMPO
+  expiresAt          DateTime
+  isDelivery         Boolean      @default(false)
+  shippingAddress    String? // Snapshot: dirección libre (p.ej. formulario de checkout)
+  FK_shippingAddress Int? // Opcional: FK a tbaddresses para reporting y normalización
+  shippingAddressRef tbaddresses? @relation(fields: [FK_shippingAddress], references: [PK_address])
+
+  // Auditoría para el encargado de sucursal
+  notes             String? // "Clienta dice que pasará el viernes sin falta"
+  updatedByEmployee Int? // El ID del empleado que modificó la reserva (importante!)
+
+  waitingList Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  customer          tbcustomer_profiles  @relation(fields: [FK_customer], references: [PK_customer])
+  tbproductvariants tbproductvariants    @relation(fields: [FK_variant], references: [PK_variant])
+  tbbranches        tbbranches           @relation(fields: [FK_branch], references: [PK_branch])
+  updatedBy         tbemployee_profiles? @relation(fields: [updatedByEmployee], references: [PK_employee])
+}
+
+//////////////////////////////
+// MOVIMIENTOS DE INVENTARIO (Entradas, Salidas, Ajustes)
+//////////////////////////////
+
+model tbstockmovements {
+  PK_movement       Int          @id @default(autoincrement())
+  FK_productvariant Int
+  FK_branch         Int
+  FK_purchase       Int?
+  movementType      MovementType
+  quantity          Int
+  reason            String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime?    @updatedAt
+
+  tbproductvariants tbproductvariants @relation(fields: [FK_productvariant], references: [PK_variant])
+  tbbranches        tbbranches        @relation(fields: [FK_branch], references: [PK_branch])
+  tbpurchases       tbpurchases?      @relation(fields: [FK_purchase], references: [PK_purchase])
+
+  @@index([createdAt])
+}
+
+model tbsuppliers {
+  PK_supplier    Int       @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  phone          String?
+  email          String?
+  address        String?
+  city           String?
+  department     String?
+  country        String?
+  ci             String?   // Cédula de identidad del proveedor/contacto
+  notes          String?
+  birthDate      DateTime? // Fecha de nacimiento del contacto/proveedor
+  partnerSince   DateTime? // Desde cuándo trabaja con la empresa
+  contractEndAt  DateTime? // Fecha fin de contrato del proveedor (nulo = indefinido)
+  isIndefinite   Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  FK_company     Int?      // Compañía a la que pertenece el proveedor
+  deletedAt      DateTime? // Fecha de borrado lógico (soft-delete) para proveedores
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime? @updatedAt
+  FK_createdBy   Int?      // Usuario que creó el proveedor
+  FK_updatedBy   Int?      // Usuario que actualizó el proveedor
+
+  // Relación muchos-a-muchos con managers (encargados de sucursal)
+  supplierManagers tbsupplier_managers[]
+
+  // Relación muchos-a-muchos con sucursales
+  supplierBranches tbsupplier_branches[]
+
+  // Relación con compañía
+  company tbcompanies? @relation(fields: [FK_company], references: [PK_company])
+
+  // Relaciones de auditoría
+  createdBy tbemployee_profiles? @relation("SupplierCreatedBy", fields: [FK_createdBy], references: [PK_employee])
+  updatedBy tbemployee_profiles? @relation("SupplierUpdatedBy", fields: [FK_updatedBy], references: [PK_employee])
+
+  tbpurchases tbpurchases[]
+}
+
+model tbsupplier_managers {
+  PK_supplier_manager Int @id @default(autoincrement())
+  FK_supplier         Int
+  FK_manager          Int
+  assignedAt          DateTime @default(now())
+
+  supplier tbsuppliers @relation(fields: [FK_supplier], references: [PK_supplier], onDelete: Cascade)
+  manager  tbemployee_profiles @relation(fields: [FK_manager], references: [PK_employee], onDelete: Cascade)
+
+  @@unique([FK_supplier, FK_manager])
+  @@index([FK_supplier])
+  @@index([FK_manager])
+}
+
+model tbsupplier_branches {
+  PK_supplier_branch Int @id @default(autoincrement())
+  FK_supplier        Int
+  FK_branch          Int
+  assignedAt         DateTime @default(now())
+
+  supplier tbsuppliers @relation(fields: [FK_supplier], references: [PK_supplier], onDelete: Cascade)
+  branch   tbbranches @relation(fields: [FK_branch], references: [PK_branch], onDelete: Cascade)
+
+  @@unique([FK_supplier, FK_branch])
+  @@index([FK_supplier])
+  @@index([FK_branch])
+}
+
+model tbpurchases {
+  PK_purchase  Int            @id @default(autoincrement())
+  FK_supplier  Int
+  FK_employee  Int
+  purchaseDate DateTime       @default(now())
+  totalItems   Int
+  totalAmount  Decimal
+  amountPaid   Decimal        @default(0)
+  amountOwed   Decimal        @default(0)
+  status       PurchaseStatus @default(PENDING)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime?      @updatedAt
+
+  tbsuppliers        tbsuppliers          @relation(fields: [FK_supplier], references: [PK_supplier])
+  employee           tbemployee_profiles  @relation(fields: [FK_employee], references: [PK_employee])
+  tbstockmovements   tbstockmovements[]
+  tbwarehouse_entry  tbwarehouse_entry[]
+  tbpaymentsuppliers tbpaymentsuppliers[]
+
+  @@index([purchaseDate])
+}
+
+model tbpaymentsuppliers {
+  PK_payment  Int            @id @default(autoincrement())
+  FK_purchase Int
+  FK_employee Int
+  amount      Decimal
+  paymentDate DateTime       @default(now())
+  method      PaymentMethod?
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime?      @updatedAt
+
+  tbpurchases tbpurchases         @relation(fields: [FK_purchase], references: [PK_purchase])
+  employee    tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+}
+
+//////////////////////////////
+// GESTIÓN DE TURNOS Y CALENDARIO
+//////////////////////////////
+
+model tbshifts_schedule {
+  PK_shift    Int @id @default(autoincrement())
+  FK_employee Int // Empleado asignado
+  FK_branch   Int // En qué sucursal le toca
+
+  date      DateTime // Fecha específica (ej. Sábado 27 de Julio)
+  startTime String // "08:00"
+  endTime   String // "14:00"
+
+  shiftType ShiftType @default(NORMAL)
+  isHoliday Boolean   @default(false) // Si el dueño marca que no se trabaja
+
+  notes String? // "Intercambio de turno con Maria" o "Feriado Local"
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  employee tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+  branch   tbbranches          @relation(fields: [FK_branch], references: [PK_branch])
+
+  @@unique([FK_employee, date]) // Una empleada no puede tener dos turnos el mismo día
+}
+
+// Para los gastos que mencionamos antes
+model tbexpenses {
+  PK_expense  Int  @id @default(autoincrement())
+  FK_branch   Int
+  FK_employee Int // Quién hizo el gasto (empleado)
+  FK_session  Int? // Vinculado a la sesión de caja actual
+
+  amount       Decimal
+  category     ExpenseCategory // "LIMPIEZA", "REFRIGERIO", "PASAJES", "ALQUILER"
+  description  String
+  receiptPhoto String? // Foto del recibo o factura
+
+  createdAt DateTime @default(now())
+
+  branch   tbbranches          @relation(fields: [FK_branch], references: [PK_branch])
+  employee tbemployee_profiles @relation(fields: [FK_employee], references: [PK_employee])
+  session  tbcash_sessions?    @relation(fields: [FK_session], references: [PK_session])
+}
+
+//////////////////////////////
+// CARRITO (persistente entre dispositivos)
+//////////////////////////////
+
+model tbcart_items {
+  PK_cartItem Int       @id @default(autoincrement())
+  FK_customer Int
+  FK_variant  Int
+  quantity    Int       @default(1)
+  createdAt   DateTime  @default(now())
+  // Opcional: token de invitado para carritos no autenticados y TTL
+  guestToken  String?
+  expiresAt   DateTime?
+
+  customer tbcustomer_profiles @relation(fields: [FK_customer], references: [PK_customer])
+  variant  tbproductvariants   @relation(fields: [FK_variant], references: [PK_variant])
+
+  @@unique([FK_customer, FK_variant]) // Evita duplicados en el carrito
+  @@index([FK_customer, createdAt])
+}
+
+// Tabla intermedia para relación many-to-many entre managers y sucursales
+model tbmanager_branches {
+  PK_manager_branch Int       @id @default(autoincrement())
+  FK_manager        Int
+  FK_branch         Int
+  assignedAt        DateTime  @default(now())
+
+  manager tbemployee_profiles @relation(fields: [FK_manager], references: [PK_employee])
+  branch  tbbranches         @relation(fields: [FK_branch], references: [PK_branch])
+
+  @@unique([FK_manager, FK_branch]) // Un manager no puede estar asignado dos veces a la misma sucursal
+  @@index([FK_manager])
+  @@index([FK_branch])
+}
