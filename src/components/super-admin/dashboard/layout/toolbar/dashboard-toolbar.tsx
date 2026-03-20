@@ -4,12 +4,15 @@ import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 
 import { Bell, Languages, Maximize, MessageSquare, Minimize, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
 
 import { usePathname } from "next/navigation";
 
 import {
+  getSuperAdminToolbarLanguageAction,
   getSuperAdminToolbarNotificationsAction,
   markSuperAdminToolbarNotificationsReadAction,
+  updateSuperAdminToolbarLanguageAction,
 } from "@/actions/super-admin/user-settings/actions";
 
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +85,7 @@ export function DashboardToolbar() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notices, setNotices] = useState<ToolbarNotice[]>([]);
+  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
   const breadcrumbs = useMemo(() => buildBreadcrumbs(pathname, language), [pathname, language]);
 
   useEffect(() => {
@@ -105,6 +109,15 @@ export function DashboardToolbar() {
       if (result.success) setUnreadCount(0);
     });
   };
+
+  useEffect(() => {
+    startTransition(async () => {
+      const result = await getSuperAdminToolbarLanguageAction();
+      if (result.success && result.data) {
+        setLanguage(result.data.language);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -133,6 +146,20 @@ export function DashboardToolbar() {
       return;
     }
     await document.documentElement.requestFullscreen();
+  };
+
+  const onChangeLanguage = (next: ToolbarLanguage) => {
+    if (next === language || isSavingLanguage) return;
+
+    setLanguage(next);
+    setIsSavingLanguage(true);
+    startTransition(async () => {
+      const result = await updateSuperAdminToolbarLanguageAction(next);
+      setIsSavingLanguage(false);
+      if (!result.success) {
+        toast.error(result.error ?? "No se pudo actualizar el idioma");
+      }
+    });
   };
 
   return (
@@ -204,7 +231,7 @@ export function DashboardToolbar() {
             <DropdownMenuLabel>Idioma</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {languageOptions.map((item) => (
-              <DropdownMenuItem key={item.value} onClick={() => setLanguage(item.value)}>
+              <DropdownMenuItem key={item.value} onClick={() => onChangeLanguage(item.value)}>
                 {item.label}
               </DropdownMenuItem>
             ))}

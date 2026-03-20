@@ -7,6 +7,61 @@ import { prisma } from "@/lib/prisma";
 import { ensureSuperAdminSession, getOrCreateEmployeeSettings } from "./common";
 import { updateSystemSchema, type UpdateSystemInput } from "../schemas/preferences.schema";
 
+type ToolbarLanguage = "es" | "en" | "pt" | "fr";
+
+const TOOLBAR_LANGUAGES = new Set<ToolbarLanguage>(["es", "en", "pt", "fr"]);
+
+export async function getSuperAdminToolbarLanguageAction() {
+  const session = await ensureSuperAdminSession();
+  if (!session) return { success: false, error: "No autorizado" };
+
+  const employee = await prisma.employee.findUnique({
+    where: { id: session.employeeId },
+    select: { language: true },
+  });
+  if (!employee) return { success: false, error: "Perfil no encontrado" };
+
+  const language = TOOLBAR_LANGUAGES.has(employee.language as ToolbarLanguage)
+    ? (employee.language as ToolbarLanguage)
+    : "es";
+
+  return { success: true, data: { language } };
+}
+
+export async function updateSuperAdminToolbarLanguageAction(language: ToolbarLanguage) {
+  const session = await ensureSuperAdminSession();
+  if (!session) return { success: false, error: "No autorizado" };
+
+  if (!TOOLBAR_LANGUAGES.has(language)) return { success: false, error: "Idioma invalido" };
+
+  const existing = await prisma.employee.findUnique({
+    where: { id: session.employeeId },
+    select: { id: true, language: true },
+  });
+  if (!existing) return { success: false, error: "Perfil no encontrado" };
+  if (existing.language === language) return { success: true };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.employee.update({
+      where: { id: existing.id },
+      data: { language },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        entity: "SuperAdminToolbarLanguage",
+        entityId: existing.id,
+        action: "UPDATE",
+        employeeId: existing.id,
+        oldValue: JSON.stringify({ language: existing.language }),
+        newValue: JSON.stringify({ language }),
+      },
+    });
+  });
+
+  return { success: true };
+}
+
 export async function getSuperAdminSystemSettingsAction() {
   const session = await ensureSuperAdminSession();
   if (!session) return { success: false, error: "No autorizado" };

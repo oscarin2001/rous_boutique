@@ -1,6 +1,5 @@
 import {
   BadgeCheck,
-  Globe,
   IdCard,
   Phone,
   User,
@@ -173,11 +172,6 @@ export async function MePage() {
         </div>
 
         <SkillsLanguagesPanel skills={skills} languages={languages} />
-
-        <div className="rounded-xl bg-card/70 p-4 text-xs text-muted-foreground shadow-sm ring-0">
-          <p className="flex items-center gap-2"><BadgeCheck className="size-4" />Seccion preparada para ampliar Sobre mi (foto, bio profesional, enlaces internos y metricas de desempeno). Foto ya persistida como URL temporal en BD.</p>
-          <p className="mt-2 flex items-center gap-2"><Globe className="size-4" />URL interna sugerida para compartir perfil dentro del equipo: /dashboard/me</p>
-        </div>
       </section>
     </div>
   );
