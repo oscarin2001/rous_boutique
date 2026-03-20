@@ -15,6 +15,16 @@ export const updateProfileSchema = z.object({
   birthDate: z.string().trim().min(1, "Ingresa la fecha de nacimiento"),
   phone: z.string().trim().optional().or(z.literal("")).refine((v) => !v || BOLIVIA_PHONE_REGEX.test(v), "Telefono invalido"),
   ci: z.string().trim().regex(/^[A-Za-z0-9-]{5,20}$/, "CI invalido"),
+  profession: z.string().trim().max(80, "Profesion demasiado larga").optional().or(z.literal("")),
+  photoUrl: z
+    .string()
+    .trim()
+    .max(300, "URL de foto demasiado larga")
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || /^https?:\/\//i.test(v) || v.startsWith("/"), "URL de foto invalida"),
+  aboutMe: z.string().trim().max(600, "Sobre mi no puede exceder 600 caracteres").optional().or(z.literal("")),
+  skills: z.string().trim().max(300, "Habilidades no puede exceder 300 caracteres").optional().or(z.literal("")),
   username: z
     .string()
     .trim()

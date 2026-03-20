@@ -180,9 +180,14 @@ body {
 }
 
 /* Strong but clean focus affordance */
-:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+:where(button, a, [role="button"]):focus-visible {
   outline: 2px solid hsl(var(--ring) / 0.75);
   outline-offset: 2px;
+}
+
+:where(input, select, textarea, label):focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 /* Unified modal sizing for super-admin module dialogs */

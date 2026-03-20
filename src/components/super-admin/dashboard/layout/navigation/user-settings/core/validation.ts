@@ -19,6 +19,11 @@ export function validateProfile(value: ProfileForm): ProfileFieldErrors {
   if (birthDate && !hasMinimumAge(birthDate, 18)) errors.birthDate = "Debe ser mayor de 18 anos";
   if (value.phone && !BOLIVIA_PHONE_REGEX.test(value.phone)) errors.phone = "Telefono invalido";
   if (!/^[A-Za-z0-9-]{5,20}$/.test(value.ci)) errors.ci = "CI invalido";
+  if (value.profession && value.profession.trim().length > 80) errors.profession = "Profesion demasiado larga";
+  if (value.photoUrl && value.photoUrl.trim().length > 300) errors.photoUrl = "URL de foto demasiado larga";
+  if (value.photoUrl && !/^https?:\/\//i.test(value.photoUrl.trim()) && !value.photoUrl.trim().startsWith("/")) errors.photoUrl = "URL de foto invalida";
+  if (value.aboutMe && value.aboutMe.trim().length > 600) errors.aboutMe = "Sobre mi demasiado largo";
+  if (value.skills && value.skills.trim().length > 300) errors.skills = "Habilidades demasiado largas";
 
   if (!/^[a-z0-9._@-]{3,60}$/.test(value.username)) errors.username = "Usuario invalido";
   if (value.newPassword && value.newPassword.length < 8) errors.newPassword = "Minimo 8 caracteres";

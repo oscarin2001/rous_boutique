@@ -1,4 +1,10 @@
-export type TabId = "profile" | "system" | "security";
+export type TabId =
+  | "profile"
+  | "notifications"
+  | "system"
+  | "account-security"
+  | "superadmins"
+  | "audit";
 
 export type ProfileForm = {
   firstName: string;
@@ -6,6 +12,10 @@ export type ProfileForm = {
   birthDate: string;
   phone: string;
   ci: string;
+  profession: string;
+  photoUrl: string;
+  aboutMe: string;
+  skills: string;
   initialUsername: string;
   username: string;
   newPassword: string;
@@ -50,7 +60,7 @@ export type CreateSuperAdminForm = {
   passwordConfirm: string;
 };
 
-export type ProfileFieldErrors = Partial<Record<"firstName" | "lastName" | "birthDate" | "phone" | "ci" | "username" | "currentPassword" | "newPassword" | "newPasswordConfirm", string>>;
+export type ProfileFieldErrors = Partial<Record<"firstName" | "lastName" | "birthDate" | "phone" | "ci" | "profession" | "photoUrl" | "aboutMe" | "skills" | "username" | "currentPassword" | "newPassword" | "newPasswordConfirm", string>>;
 export type CreateAccountFieldErrors = Partial<Record<keyof CreateSuperAdminForm, string>>;
 
 export type SessionRow = {

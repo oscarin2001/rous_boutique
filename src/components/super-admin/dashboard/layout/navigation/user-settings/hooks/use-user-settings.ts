@@ -19,7 +19,7 @@ import {
 import { validateCreateAccount, validateProfile } from "../core";
 import type { AuditFeedRow, CreateAccountFieldErrors, CreateSuperAdminForm, ProfileFieldErrors, ProfileForm, SensitiveAction, SessionRow, SystemForm, TabId } from "../core";
 
-const initialProfile: ProfileForm = { firstName: "", lastName: "", birthDate: "", phone: "", ci: "", initialUsername: "", username: "", newPassword: "", newPasswordConfirm: "", lastLogin: null, canChangeCredentials: true, lastCredentialChangeAt: null, nextCredentialChangeAt: null };
+const initialProfile: ProfileForm = { firstName: "", lastName: "", birthDate: "", phone: "", ci: "", profession: "", photoUrl: "", aboutMe: "", skills: "", initialUsername: "", username: "", newPassword: "", newPasswordConfirm: "", lastLogin: null, canChangeCredentials: true, lastCredentialChangeAt: null, nextCredentialChangeAt: null };
 const initialSystem: SystemForm = { theme: "system", language: "es", notifications: true, timezone: "America/La_Paz", dateFormat: "DD/MM/YYYY", timeFormat: "24h", currency: "BOB", sessionTtlMinutes: 480, emergencyPhone: "", emergencyContactName: "", emergencyContactPhone: "", signatureDisplayName: "", signatureTitle: "", notificationChannels: { login: true, create: true, update: true, delete: true, security: true } };
 const initialCreate: CreateSuperAdminForm = { firstName: "", lastName: "", birthDate: "", ci: "", phone: "", username: "", password: "", passwordConfirm: "" };
 
@@ -35,6 +35,7 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [isPending, startTransition] = useTransition();
   const [profile, setProfile] = useState<ProfileForm>(initialProfile);
+  const [profileSnapshot, setProfileSnapshot] = useState<ProfileForm>(initialProfile);
   const [system, setSystem] = useState<SystemForm>(initialSystem);
   const [createAccount, setCreateAccount] = useState<CreateSuperAdminForm>(initialCreate);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -45,16 +46,32 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [closeSessionsPromptOpen, setCloseSessionsPromptOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [pendingAction, setPendingAction] = useState<SensitiveAction | null>(null);
-  const canSubmitProfile = !isPending && (!!profile.firstName || !!profile.lastName);
+  const hasProfileChanges =
+    profile.firstName !== profileSnapshot.firstName ||
+    profile.lastName !== profileSnapshot.lastName ||
+    profile.birthDate !== profileSnapshot.birthDate ||
+    profile.phone !== profileSnapshot.phone ||
+    profile.ci !== profileSnapshot.ci ||
+    profile.profession !== profileSnapshot.profession ||
+    profile.photoUrl !== profileSnapshot.photoUrl ||
+    profile.aboutMe !== profileSnapshot.aboutMe ||
+    profile.skills !== profileSnapshot.skills ||
+    profile.username !== profileSnapshot.username ||
+    Boolean(profile.newPassword) ||
+    Boolean(profile.newPasswordConfirm);
+  const canSubmitProfile = !isPending && hasProfileChanges;
 
   useEffect(() => {
     if (!open) return;
-    setIsEditMode(false);
+    setIsEditingCredentials(false);
     startTransition(async () => {
       const [profileRes, systemRes, sessionsRes, auditRes] = await Promise.all([getSuperAdminProfileAction(), getSuperAdminSystemSettingsAction(), getRecentSuperAdminSessionsAction(), getSuperAdminAuditFeedAction()]);
-      if (profileRes.success && profileRes.data) setProfile({ ...initialProfile, ...profileRes.data, initialUsername: profileRes.data.username });
+      if (profileRes.success && profileRes.data) {
+        const hydratedProfile = { ...initialProfile, ...profileRes.data, initialUsername: profileRes.data.username };
+        setProfile(hydratedProfile);
+        setProfileSnapshot(hydratedProfile);
+      }
       if (systemRes.success && systemRes.data) setSystem((prev) => ({ ...prev, ...systemRes.data }));
       if (sessionsRes.success && sessionsRes.data) setSessions(sessionsRes.data);
       if (auditRes.success && "data" in auditRes && auditRes.data) setAuditFeed(auditRes.data);
@@ -64,7 +81,6 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
 
   const changeTab = (tab: TabId) => {
     setActiveTab(tab);
-    setIsEditMode(false);
   };
 
   const requestConfirmation = (action: SensitiveAction) => {
@@ -74,7 +90,7 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
   };
 
   const saveProfile = () => {
-    if (!isEditMode) return toast.info("Activa modo edicion para modificar datos");
+    if (!hasProfileChanges) return toast.info("No hay cambios para guardar");
     const errors = validateProfile(profile);
     setProfileErrors(errors);
     if (Object.keys(errors).length) return toast.error("Corrige los datos del perfil");
@@ -82,12 +98,10 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
   };
 
   const saveSystem = () => {
-    if (!isEditMode) return toast.info("Activa modo edicion para modificar datos");
     requestConfirmation("system");
   };
 
   const createSuperAdmin = () => {
-    if (!isEditMode) return toast.info("Activa modo edicion para ejecutar cambios de seguridad");
     const errors = validateCreateAccount(createAccount);
     setCreateErrors(errors);
     if (Object.keys(errors).length) return toast.error("Corrige la cuenta a crear");
@@ -95,7 +109,6 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
   };
 
   const revokeOtherSessions = () => {
-    if (!isEditMode) return toast.info("Activa modo edicion para ejecutar cambios de seguridad");
     setCloseSessionsPromptOpen(true);
   };
   const confirmCloseOtherSessions = () => {
@@ -121,12 +134,13 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
 
     setConfirmError(null);
     setConfirmOpen(false);
-    setIsEditMode(false);
 
     if (pendingAction === "profile") {
       onProfileIdentityChange?.({ firstName: profile.firstName, lastName: profile.lastName });
       setIsEditingCredentials(false);
-      setProfile((v) => ({ ...v, initialUsername: v.username, newPassword: "", newPasswordConfirm: "" }));
+      const nextProfile = { ...profile, initialUsername: profile.username, newPassword: "", newPasswordConfirm: "" };
+      setProfile(nextProfile);
+      setProfileSnapshot(nextProfile);
       toast.success("Perfil actualizado");
     }
     if (pendingAction === "system") {
@@ -153,7 +167,7 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
     activeTab, setActiveTab: changeTab, isPending, profile, setProfile, system, setSystem, createAccount, setCreateAccount, sessions, auditFeed,
     profileErrors, setProfileErrors, createErrors, setCreateErrors, isEditingCredentials, setIsEditingCredentials, canSubmitProfile,
     saveProfile, saveSystem, createSuperAdmin, revokeOtherSessions,
-    isEditMode, setIsEditMode, closeSessionsPromptOpen, setCloseSessionsPromptOpen, confirmCloseOtherSessions,
+    closeSessionsPromptOpen, setCloseSessionsPromptOpen, confirmCloseOtherSessions,
     confirmOpen, setConfirmOpen, confirmError, confirmTitle: confirmMeta.title, confirmDescription: confirmMeta.description, confirmSensitiveAction,
   };
 }

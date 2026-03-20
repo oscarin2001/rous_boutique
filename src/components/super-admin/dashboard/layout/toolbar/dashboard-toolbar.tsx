@@ -128,7 +128,7 @@ export function DashboardToolbar() {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-border/70 bg-card/90 px-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    <header className="sticky top-2 z-10 mx-2 flex h-14 shrink-0 items-center gap-2 rounded-xl border border-border/70 bg-card/90 px-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <SidebarTrigger className="-ml-1" />
       <Breadcrumb className="hidden md:flex">
         <BreadcrumbList>
@@ -203,6 +203,10 @@ function t(label: string, language: "es" | "en") {
 function buildBreadcrumbs(pathname: string, language: "es" | "en"): Crumb[] {
   if (pathname === "/dashboard") {
     return [{ label: t("Vista Ejecutiva", language), href: "/dashboard" }];
+  }
+
+  if (pathname.startsWith("/dashboard/me")) {
+    return [{ label: language === "es" ? "Mi perfil" : "My profile", href: "/dashboard/me" }];
   }
 
   for (const group of superAdminNavGroups) {

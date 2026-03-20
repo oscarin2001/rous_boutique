@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 
-import { Camera, ChevronsUpDown, LogOut, Shield, User } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings, Shield, User, UserPen } from "lucide-react";
+
+import Link from "next/link";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -36,6 +38,7 @@ export function NavUser({
 }: NavUserProps) {
   const { isMobile } = useSidebar();
   const [openSettings, setOpenSettings] = useState(false);
+  const [settingsEntryPoint, setSettingsEntryPoint] = useState<"profile-view" | "profile-edit" | "settings">("settings");
   const [displayName, setDisplayName] = useState({ firstName, lastName });
   const initials = useMemo(() => `${displayName.firstName.charAt(0)}${displayName.lastName.charAt(0)}`.toUpperCase(), [displayName]);
 
@@ -88,13 +91,17 @@ export function NavUser({
               </div>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setOpenSettings(true)}>
+            <DropdownMenuItem render={<Link href="/dashboard/me" />}>
               <User className="size-4" />
+              Ver mi perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setSettingsEntryPoint("profile-edit"); setOpenSettings(true); }}>
+              <UserPen className="size-4" />
               Editar perfil
             </DropdownMenuItem>
-            <DropdownMenuItem disabled>
-              <Camera className="size-4" />
-              Foto de perfil (proximamente)
+            <DropdownMenuItem onClick={() => { setSettingsEntryPoint("settings"); setOpenSettings(true); }}>
+              <Settings className="size-4" />
+              Configuraciones
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <form action={logoutAction}>
@@ -105,7 +112,7 @@ export function NavUser({
             </form>
           </DropdownMenuContent>
         </DropdownMenu>
-        <UserSettingsDialog open={openSettings} onOpenChange={setOpenSettings} onProfileIdentityChange={(payload) => setDisplayName(payload)} />
+        <UserSettingsDialog open={openSettings} onOpenChange={setOpenSettings} entryPoint={settingsEntryPoint} onProfileIdentityChange={(payload) => setDisplayName(payload)} />
       </SidebarMenuItem>
     </SidebarMenu>
   );

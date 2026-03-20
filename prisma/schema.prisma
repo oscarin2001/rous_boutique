@@ -257,6 +257,11 @@ model Employee {
   ci        String    @unique // Cédula de Identidad (Bolivia)
   phone     String?
   birthDate DateTime?
+  profession String?
+  aboutMe    String?
+  skills     String?
+  languages  String?
+  photoUrl   String?
 
   // Employment data
   salary           Decimal          @default(0)
