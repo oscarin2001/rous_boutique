@@ -61,8 +61,8 @@ export function ManagerDetailsDialog({ manager, open, onOpenChange }: Props) {
             <Row icon={Phone} label="Telefono" value={manager.phone ?? "Sin telefono"} />
             <Row icon={Calendar} label="Nacimiento" value={fmtDate(manager.birthDate)} />
             <Row icon={Calendar} label="Ingreso" value={fmtDate(manager.hireDate)} />
-            <Row icon={BadgeCheck} label="Recibe salario" value={manager.receivesSalary ? "Si" : "No"} />
-            <Row icon={Wallet} label="Salario (BOL)" value={fmtMoney(manager.salary)} />
+            <Row icon={BadgeCheck} label="Pago de ingreso registrado" value={manager.receivesSalary ? "Si" : "No"} />
+            <Row icon={Wallet} label="Monto de ingreso (BOL)" value={fmtMoney(manager.salary)} />
             <div className="flex items-start gap-2">
               <MapPin className="mt-0.5 size-4 text-muted-foreground" />
               <div>

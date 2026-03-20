@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { ChevronsUpDown, LogOut, Shield, User } from "lucide-react";
+import { Camera, ChevronsUpDown, LogOut, Shield, User } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -90,7 +90,11 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setOpenSettings(true)}>
               <User className="size-4" />
-              Perfil
+              Editar perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled>
+              <Camera className="size-4" />
+              Foto de perfil (proximamente)
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <form action={logoutAction}>

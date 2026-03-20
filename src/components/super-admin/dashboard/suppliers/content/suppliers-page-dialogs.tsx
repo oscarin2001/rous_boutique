@@ -11,14 +11,14 @@ interface Props {
   formOpen: boolean;
   deleteOpen: boolean;
   detailsOpen: boolean;
-  historyOpen: boolean;
-  historyRows: SupplierHistoryRow[];
-  historyLoading: boolean;
+  historyOpen?: boolean;
+  historyRows?: SupplierHistoryRow[];
+  historyLoading?: boolean;
   isPending: boolean;
   onFormOpenChange: (value: boolean) => void;
   onDeleteOpenChange: (value: boolean) => void;
   onDetailsOpenChange: (value: boolean) => void;
-  onHistoryOpenChange: (value: boolean) => void;
+  onHistoryOpenChange?: (value: boolean) => void;
   onSubmit: (data: Record<string, unknown>, id?: number) => Promise<SupplierActionResult>;
   onConfirmDelete: (password: string) => void;
 }
@@ -29,14 +29,14 @@ export function SuppliersPageDialogs({
   formOpen,
   deleteOpen,
   detailsOpen,
-  historyOpen,
-  historyRows,
-  historyLoading,
+  historyOpen = false,
+  historyRows = [],
+  historyLoading = false,
   isPending,
   onFormOpenChange,
   onDeleteOpenChange,
   onDetailsOpenChange,
-  onHistoryOpenChange,
+  onHistoryOpenChange = () => {},
   onSubmit,
   onConfirmDelete,
 }: Props) {

@@ -25,6 +25,7 @@ export function SupplierFormFields({
         onSelectedBranchIdsChange={onSelectedBranchIdsChange}
         selectedManagerIds={selectedManagerIds}
         onSelectedManagerIdsChange={onSelectedManagerIdsChange}
+        errors={errors}
         onFieldInput={onFieldInput}
       />
     </div>

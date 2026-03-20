@@ -20,6 +20,7 @@ import type {
   ManagerRow,
 } from "@/actions/super-admin/managers/types";
 
+import { ManagerAssignmentsDialog } from "../dialogs/manager-assignments-dialog";
 import { ManagerDeleteDialog } from "../dialogs/manager-delete-dialog";
 import { ManagerDetailsDialog } from "../dialogs/manager-details-dialog";
 import { ManagerHistoryDialog } from "../dialogs/manager-history-dialog";
@@ -41,6 +42,7 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
   const [formOpen, setFormOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<ManagerAuditEntry[]>([]);
@@ -179,6 +181,10 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
           setSelected(manager);
           setFormOpen(true);
         }}
+        onManage={(manager) => {
+          setSelected(manager);
+          setManageOpen(true);
+        }}
         onHistory={handleOpenHistory}
         onToggleStatus={handleToggleStatus}
         onDelete={(manager) => {
@@ -206,6 +212,34 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
           setDetailsOpen(value);
           if (!value) setSelected(null);
         }}
+      />
+
+      <ManagerAssignmentsDialog
+        open={manageOpen}
+        onOpenChange={(value) => {
+          setManageOpen(value);
+          if (!value) setSelected(null);
+        }}
+        manager={selected}
+        branchOptions={branchOptions}
+        isPending={isPending}
+        onSave={(data, id) =>
+          new Promise((resolve) => {
+            startTransition(async () => {
+              const result = await updateManager(id, data);
+              if (result.success && result.manager) {
+                setManagers((prev) => prev.map((item) => (item.id === result.manager!.id ? result.manager! : item)));
+                await refreshBranchOptions();
+                toast.success("Asignaciones actualizadas");
+                setManageOpen(false);
+                setSelected(null);
+              } else if (!result.fieldErrors) {
+                toast.error(result.error ?? "No se pudieron guardar asignaciones");
+              }
+              resolve(result);
+            });
+          })
+        }
       />
 
       <ManagerHistoryDialog

@@ -1,6 +1,8 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
+
 import type { SupplierFormProps } from "./supplier-form-types";
 
 type Props = Pick<
@@ -11,6 +13,7 @@ type Props = Pick<
   | "onSelectedBranchIdsChange"
   | "selectedManagerIds"
   | "onSelectedManagerIdsChange"
+  | "errors"
   | "onFieldInput"
 >;
 
@@ -21,6 +24,7 @@ export function SupplierAssignmentFields({
   onSelectedBranchIdsChange,
   selectedManagerIds,
   onSelectedManagerIdsChange,
+  errors,
   onFieldInput,
 }: Props) {
   const branchSet = new Set(selectedBranchIds);
@@ -56,6 +60,8 @@ export function SupplierAssignmentFields({
           ))}
         </div>
         {selectedBranchIds.map((id) => <input key={id} type="hidden" name="branchIds" value={id} />)}
+        <p className="text-[11px] text-muted-foreground">{ADMIN_VALIDATION_MESSAGES.branchRequired}</p>
+        {errors?.branchIds ? <p className="text-xs text-destructive">{errors.branchIds}</p> : null}
       </div>
 
       <div className="space-y-2 rounded-lg border p-3">
@@ -70,6 +76,7 @@ export function SupplierAssignmentFields({
           ))}
         </div>
         {selectedManagerIds.map((id) => <input key={id} type="hidden" name="managerIds" value={id} />)}
+        {errors?.managerIds ? <p className="text-xs text-destructive">{errors.managerIds}</p> : null}
       </div>
     </div>
   );

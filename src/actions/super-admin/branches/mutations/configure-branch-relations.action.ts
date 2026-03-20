@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { BranchActionResult } from "@/actions/super-admin/branches/types";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -17,6 +18,8 @@ type ConfigureInput = {
   supplierIds: number[];
   confirmPassword: string;
 };
+
+const MAX_MANAGERS_PER_BRANCH = 2;
 
 export async function configureBranchRelations(
   branchId: number,
@@ -33,6 +36,14 @@ export async function configureBranchRelations(
   const managerIds = Array.from(new Set(data.managerIds.filter((id) => Number.isInteger(id) && id > 0)));
   const warehouseIds = Array.from(new Set(data.warehouseIds.filter((id) => Number.isInteger(id) && id > 0)));
   const supplierIds = Array.from(new Set(data.supplierIds.filter((id) => Number.isInteger(id) && id > 0)));
+
+  if (managerIds.length > MAX_MANAGERS_PER_BRANCH) {
+    return {
+      success: false,
+      error: `Una sucursal puede tener maximo ${MAX_MANAGERS_PER_BRANCH} encargados`,
+      fieldErrors: { managerId: ADMIN_VALIDATION_MESSAGES.maxManagersPerBranch },
+    };
+  }
 
   const existing = await prisma.branch.findUnique({
     where: { id: branchId },

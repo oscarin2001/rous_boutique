@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { BOLIVIA_PHONE_REGEX } from "@/lib/bolivia";
 import { HUMAN_NAME_REGEX, PLACE_NAME_REGEX, isValidIsoDate } from "@/lib/field-validation";
 
@@ -58,6 +59,14 @@ function applySupplierCrossValidation(
   data: z.infer<typeof supplierSchemaBase>,
   ctx: z.RefinementCtx
 ) {
+  if (!data.branchIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["branchIds"],
+      message: ADMIN_VALIDATION_MESSAGES.branchRequired,
+    });
+  }
+
   if (data.isIndefinite && data.contractEndAt) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

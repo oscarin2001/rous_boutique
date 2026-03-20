@@ -16,6 +16,8 @@ export async function getWarehouseHistory(id: number): Promise<WarehouseHistoryR
     id: log.id,
     action: log.action,
     actorName: log.employee ? `${log.employee.firstName} ${log.employee.lastName}` : "Sistema",
+    oldValue: log.oldValue,
+    newValue: log.newValue,
     createdAt: log.createdAt.toISOString(),
   }));
 }

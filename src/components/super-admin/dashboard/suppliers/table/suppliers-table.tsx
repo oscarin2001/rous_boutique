@@ -5,7 +5,6 @@ import {
   Pencil, 
   Trash, 
   Eye, 
-  History, 
   CheckCircle2, 
   XCircle 
 } from "lucide-react";
@@ -36,19 +35,19 @@ import {
 interface Props {
   suppliers: SupplierRow[];
   onEdit: (supplier: SupplierRow) => void;
+  onManage: (supplier: SupplierRow) => void;
   onDelete: (supplier: SupplierRow) => void;
   onToggleStatus: (supplier: SupplierRow) => void;
   onViewDetails: (supplier: SupplierRow) => void;
-  onViewHistory: (supplier: SupplierRow) => void;
 }
 
 export function SuppliersTable({
   suppliers,
   onEdit,
+  onManage,
   onDelete,
   onToggleStatus,
   onViewDetails,
-  onViewHistory,
 }: Props) {
   return (
     <div className="rounded-md border border-border/20 bg-card/60 shadow-sm">
@@ -114,6 +113,7 @@ export function SuppliersTable({
                       </DropdownMenuGroup>
                       <DropdownMenuItem onClick={() => onViewDetails(s)}><Eye className="mr-2 size-4" /> Ver Detalles</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onEdit(s)}><Pencil className="mr-2 size-4" /> Editar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onManage(s)}><Eye className="mr-2 size-4" /> Gestionar asignaciones</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onToggleStatus(s)}>
                         {s.isActive ? (
                           <><XCircle className="mr-2 size-4 text-warning" /> Desactivar</>
@@ -122,7 +122,6 @@ export function SuppliersTable({
                         )}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onViewHistory(s)}><History className="mr-2 size-4" /> Ver Historial</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onDelete(s)} className="text-destructive"><Trash className="mr-2 size-4" /> Eliminar</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

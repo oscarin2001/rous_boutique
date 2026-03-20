@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { HUMAN_NAME_REGEX, isValidIsoDate } from "@/lib/field-validation";
 import { buildManagerEmail, MANAGER_USERNAME_REGEX, normalizeManagerUsername } from "@/lib/manager-email";
 
@@ -48,6 +49,8 @@ type ManagerDraft = {
 };
 
 type ChangeItem = { label: string; from: string; to: string };
+
+const MAX_MANAGERS_PER_BRANCH = 2;
 
 interface Props {
   open: boolean;
@@ -144,8 +147,8 @@ function summarizeChanges(
     { key: "ci", label: "CI" },
     { key: "phone", label: "Telefono" },
     { key: "emailUsername", label: "Usuario de correo" },
-    { key: "receivesSalary", label: "Recibe salario" },
-    { key: "salary", label: "Salario" },
+    { key: "receivesSalary", label: "Pago de ingreso registrado" },
+    { key: "salary", label: "Monto de ingreso" },
     { key: "homeAddress", label: "Direccion" },
     { key: "birthDate", label: "Fecha de nacimiento" },
     { key: "hireDate", label: "Fecha de ingreso" },
@@ -247,6 +250,10 @@ export function ManagerFormDialog({
   const validate = (data: ManagerDraft): FieldErrors => {
     const next: FieldErrors = {};
 
+    if (!isEdit && data.branchIds.length === 0) {
+      next.branchIds = ADMIN_VALIDATION_MESSAGES.branchRequired;
+    }
+
     if (data.firstName.length < 2) next.firstName = "Minimo 2 caracteres";
     if (data.firstName.length > 20) next.firstName = "Maximo 20 caracteres";
     if (data.firstName && !HUMAN_NAME_REGEX.test(data.firstName)) next.firstName = "Solo letras y separadores simples";
@@ -289,12 +296,12 @@ export function ManagerFormDialog({
 
     if (data.salary !== "") {
       const salary = Number(data.salary);
-      if (!Number.isFinite(salary)) next.salary = "Salario invalido";
+      if (!Number.isFinite(salary)) next.salary = "Monto de ingreso invalido";
       if (Number.isFinite(salary) && salary < 0) next.salary = "No puede ser negativo";
-      if (!data.receivesSalary && salary > 0) next.salary = "Si no recibe salario, el monto debe ser 0";
-      if (data.receivesSalary && salary <= 0) next.salary = "Si recibe salario, el monto debe ser mayor a 0";
+      if (!data.receivesSalary && salary > 0) next.salary = "Si no registra pago, el monto debe ser 0";
+      if (data.receivesSalary && salary <= 0) next.salary = "Si registra pago, el monto debe ser mayor a 0";
     } else if (data.receivesSalary) {
-      next.salary = "Si recibe salario, el monto debe ser mayor a 0";
+      next.salary = "Si registra pago, el monto debe ser mayor a 0";
     }
 
     if (data.homeAddress.length > 160) next.homeAddress = "Maximo 160 caracteres";
@@ -307,6 +314,18 @@ export function ManagerFormDialog({
 
     if (!data.hireDate) next.hireDate = "Fecha de ingreso obligatoria";
     if (data.hireDate && !isValidIsoDate(data.hireDate)) next.hireDate = "Fecha invalida";
+
+    const currentBranchIds = new Set(manager?.branches.map((branch) => branch.id) ?? []);
+    const overCapacitySelected = data.branchIds.some((branchId) => {
+      const branch = branchOptions.find((option) => option.id === branchId);
+      if (!branch) return false;
+      if (currentBranchIds.has(branchId)) return false;
+      return branch.assignedManagerCount >= MAX_MANAGERS_PER_BRANCH;
+    });
+
+    if (overCapacitySelected) {
+      next.branchIds = ADMIN_VALIDATION_MESSAGES.maxManagersPerBranch;
+    }
 
     return next;
   };
@@ -350,7 +369,7 @@ export function ManagerFormDialog({
     }
 
     if (!confirmPassword.trim()) {
-      setConfirmMessage("Ingresa la contrasena de confirmacion.");
+      setConfirmMessage(ADMIN_VALIDATION_MESSAGES.adminPasswordRequired);
       return;
     }
 
@@ -401,9 +420,6 @@ export function ManagerFormDialog({
 
         {step === 1 ? (
           <form key={formKey} onSubmit={handleSubmit} className="space-y-4">
-            <div className="rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground">
-              Asegúrate de que la información <strong>atribuya</strong> correctamente al rol de encargado. Si los datos <strong>aportan</strong> a la gestión operativa, se reflejarán en las sucursales asignadas.
-            </div>
             <ManagerFormFields
               manager={manager}
               branchOptions={branchOptions}

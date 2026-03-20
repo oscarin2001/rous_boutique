@@ -18,12 +18,13 @@ interface Props {
   managers: ManagerRow[];
   onView: (manager: ManagerRow) => void;
   onEdit: (manager: ManagerRow) => void;
+  onManage: (manager: ManagerRow) => void;
   onHistory: (manager: ManagerRow) => void;
   onToggleStatus: (manager: ManagerRow) => void;
   onDelete: (manager: ManagerRow) => void;
 }
 
-export function ManagersTable({ managers, onView, onEdit, onHistory, onToggleStatus, onDelete }: Props) {
+export function ManagersTable({ managers, onView, onEdit, onManage, onHistory, onToggleStatus, onDelete }: Props) {
   if (managers.length === 0) {
     return (
       <div className="rounded-lg border border-border/20 bg-card/60 p-8 text-center">
@@ -43,7 +44,7 @@ export function ManagersTable({ managers, onView, onEdit, onHistory, onToggleSta
             <TableHead>Contacto</TableHead>
             <TableHead>Sucursales</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead className="text-right">Salario</TableHead>
+            <TableHead className="text-right">Pago de ingreso</TableHead>
             <TableHead className="w-12" />
           </TableRow>
         </TableHeader>
@@ -54,6 +55,7 @@ export function ManagersTable({ managers, onView, onEdit, onHistory, onToggleSta
               manager={manager}
               onView={onView}
               onEdit={onEdit}
+              onManage={onManage}
               onHistory={onHistory}
               onToggleStatus={onToggleStatus}
               onDelete={onDelete}

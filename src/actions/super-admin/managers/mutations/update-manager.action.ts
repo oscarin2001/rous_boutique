@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { updateManagerSchema } from "@/actions/super-admin/managers/schemas";
 import type { ManagerActionResult, ManagerFormField } from "@/actions/super-admin/managers/types";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -30,6 +31,8 @@ const MANAGER_FORM_FIELDS = new Set<ManagerFormField>([
   "branchIds",
   "adminConfirmPassword",
 ]);
+
+const MAX_MANAGERS_PER_BRANCH = 2;
 
 export async function updateManager(id: number, data: Record<string, unknown>): Promise<ManagerActionResult> {
   const session = await getSession();
@@ -90,6 +93,34 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
     const branches = await prisma.branch.findMany({ where: { id: { in: branchIds } }, select: { id: true } });
     if (branches.length !== branchIds.length) {
       return { success: false, error: "Una o mas sucursales son invalidas", fieldErrors: { branchIds: "Selecciona sucursales validas" } };
+    }
+
+    const branchLoads = await prisma.branch.findMany({
+      where: { id: { in: branchIds } },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        employeeBranches: {
+          where: {
+            employee: {
+              role: { code: "MANAGER" },
+              deletedAt: null,
+              id: { not: id },
+            },
+          },
+          select: { id: true },
+        },
+      },
+    });
+
+    const saturated = branchLoads.find((branch) => branch.employeeBranches.length >= MAX_MANAGERS_PER_BRANCH);
+    if (saturated) {
+      return {
+        success: false,
+        error: `La sucursal ${saturated.name} (${saturated.city}) ya tiene ${MAX_MANAGERS_PER_BRANCH} encargados asignados`,
+        fieldErrors: { branchIds: ADMIN_VALIDATION_MESSAGES.maxManagersPerBranch },
+      };
     }
   }
 

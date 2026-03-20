@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { HUMAN_NAME_REGEX, PLACE_NAME_REGEX, isValidIsoDate } from "@/lib/field-validation";
 
 import { SupplierFormFields } from "./supplier-form-fields";
@@ -44,7 +45,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions
   const [errors, setErrors] = useState<FieldErrors>({});
   const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
   const [selectedManagerIds, setSelectedManagerIds] = useState<number[]>([]);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [draft, setDraft] = useState<SupplierDraft | null>(null);
   const [changes, setChanges] = useState<ChangeItem[]>([]);
   const [confirmName, setConfirmName] = useState("");
@@ -61,6 +62,10 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions
 
   const validateDraft = (data: SupplierDraft): FieldErrors => {
     const next: FieldErrors = {};
+
+    if (!isEdit && data.branchIds.length === 0) {
+      next.branchIds = ADMIN_VALIDATION_MESSAGES.branchRequired;
+    }
 
     if (data.firstName.length < 2) next.firstName = "Minimo 2 caracteres";
     if (data.firstName.length > 50) next.firstName = "Maximo 50 caracteres";
@@ -115,7 +120,8 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions
   const handleConfirmEdit = async () => {
     if (!supplier || !draft) return;
     if (confirmName.trim().toLowerCase() !== supplier.fullName.toLowerCase()) return setConfirmMessage("El nombre no coincide.");
-    if (!confirmPassword.trim()) return setConfirmMessage("Ingresa la contrasena de administrador.");
+    if (!confirmPassword.trim()) return setConfirmMessage(ADMIN_VALIDATION_MESSAGES.adminPasswordRequired);
+    setConfirmMessage(null);
     const res = await onSubmit({ ...draft, confirmPassword }, supplier.id);
     if (!res.success) setConfirmMessage(res.error || "Error al confirmar");
   };
@@ -132,14 +138,13 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions
         </DialogHeader>
         {isEdit ? (
           <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-            {[1, 2, 3].map((s) => (
+            {[1, 2].map((s) => (
               <div key={s} className={`h-1.5 flex-1 rounded-full ${step >= s ? "bg-primary" : "bg-muted"}`} />
             ))}
           </div>
         ) : null}
         {step === 1 ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground">Asegurate de que la informacion <strong>atribuya</strong> correctamente. Si los datos <strong>aportan</strong> valor, se reflejaran en compras y sucursales.</div>
             <SupplierFormFields supplier={supplier} branchOptions={branchOptions} managerOptions={managerOptions} selectedBranchIds={selectedBranchIds} onSelectedBranchIdsChange={setSelectedBranchIds} selectedManagerIds={selectedManagerIds} onSelectedManagerIdsChange={setSelectedManagerIds} errors={errors} onFieldInput={(name) => setErrors((prev) => ({ ...prev, [name]: undefined }))} />
             {isEdit && supplier ? (
               <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
@@ -155,22 +160,17 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions
         ) : step === 2 ? (
           <div className="space-y-4">
             <div className="rounded-lg border p-3"><h4 className="mb-2 text-sm font-medium">Resumen de cambios</h4>{changes.map((change) => <p key={`${change.label}-${change.from}-${change.to}`} className="text-xs"><strong>{change.label}:</strong> {change.from} {"->"} {change.to}</p>)}</div>
-            {confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}
-            <DialogFooter><Button variant="outline" onClick={() => setStep(1)}>Atras</Button><Button onClick={() => { setConfirmMessage(null); setStep(3); }}>Siguiente</Button></DialogFooter>
-          </div>
-        ) : (
-          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="supplier-confirm-name" className="text-xs">Escribe {supplier?.fullName} para confirmar</Label>
               <Input id="supplier-confirm-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
               <Label htmlFor="supplier-confirm-password" className="text-xs">Contrasena de administrador</Label>
               <PasswordInput id="supplier-confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             </div>
-            {confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}
             <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Confirmacion final: al continuar, los cambios del proveedor se aplicaran de forma inmediata.</div>
-            <DialogFooter><Button variant="outline" onClick={() => setStep(2)}>Atras</Button><Button onClick={handleConfirmEdit} disabled={isPending}>{isPending ? "Guardando..." : "Confirmar Edicion"}</Button></DialogFooter>
+            {confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}
+            <DialogFooter><Button variant="outline" onClick={() => setStep(1)}>Atras</Button><Button onClick={handleConfirmEdit} disabled={isPending}>{isPending ? "Guardando..." : "Confirmar Edicion"}</Button></DialogFooter>
           </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );

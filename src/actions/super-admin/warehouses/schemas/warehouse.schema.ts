@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { BOLIVIA_PHONE_REGEX } from "@/lib/bolivia";
 import { BOLIVIA_COUNTRY, BOLIVIA_DEPARTMENTS } from "@/lib/bolivia";
 import { PLACE_NAME_REGEX, parseIsoDate } from "@/lib/field-validation";
@@ -45,6 +46,14 @@ export const createWarehouseSchema = z.object({
   openedAt: dateSchema,
   branchIds: idList,
   managerIds: idList,
+}).superRefine((data, ctx) => {
+  if (!data.branchIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["branchIds"],
+      message: ADMIN_VALIDATION_MESSAGES.branchRequired,
+    });
+  }
 });
 
 export const updateWarehouseSchema = createWarehouseSchema.extend({

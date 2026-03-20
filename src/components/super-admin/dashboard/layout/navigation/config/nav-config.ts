@@ -18,47 +18,47 @@ export interface NavItem {
 
 export interface NavGroup {
   label: string;
+  dropdownTitle?: string;
   icon?: LucideIcon;
   items: NavItem[];
 }
 
 export const superAdminNavGroups: NavGroup[] = [
   {
-    label: "General",
+    label: "Vista Ejecutiva",
+    dropdownTitle: "Monitoreo",
+    icon: LayoutDashboard,
     items: [
-      { title: "Panel de Control", url: "/dashboard", icon: LayoutDashboard },
+      { title: "Panel Ejecutivo", url: "/dashboard", icon: LayoutDashboard },
+      { title: "Pedidos", url: "/dashboard/orders", icon: ClipboardList },
+      { title: "Inventario", url: "/dashboard/inventory", icon: Warehouse },
     ],
   },
   {
-    label: "Sucursales",
+    label: "Red Operativa",
+    dropdownTitle: "Operaciones",
     icon: Store,
     items: [
-      { title: "Gestión de Sucursales", url: "/dashboard/branches", icon: Store },
+      { title: "Sucursales", url: "/dashboard/branches", icon: Store },
+      { title: "Almacenes", url: "/dashboard/warehouses", icon: Warehouse },
       { title: "Proveedores", url: "/dashboard/suppliers", icon: Truck },
     ],
   },
   {
-    label: "Inventario",
+    label: "Catalogo y Stock",
+    dropdownTitle: "Catalogo",
     icon: Package,
     items: [
       { title: "Productos", url: "/dashboard/products", icon: Package },
-      { title: "Bodegas", url: "/dashboard/warehouses", icon: Warehouse },
-      { title: "Inventario Global", url: "/dashboard/inventory", icon: Warehouse },
     ],
   },
   {
-    label: "Operaciones",
-    icon: ClipboardList,
-    items: [
-      { title: "Pedidos", url: "/dashboard/orders", icon: ClipboardList },
-    ],
-  },
-  {
-    label: "Administración",
+    label: "Organizacion",
+    dropdownTitle: "Equipo",
     icon: ShieldCheck,
     items: [
-      { title: "Usuarios", url: "/dashboard/users", icon: Users },
       { title: "Encargados de sucursal", url: "/dashboard/managers", icon: Users },
+      { title: "Usuarios", url: "/dashboard/users", icon: Users },
     ],
   },
 ];

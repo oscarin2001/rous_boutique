@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { BOLIVIA_PHONE_REGEX } from "@/lib/bolivia";
 import { HUMAN_NAME_REGEX, parseIsoDate } from "@/lib/field-validation";
 import { isManagerEmail } from "@/lib/manager-email";
@@ -82,7 +83,7 @@ const managerBaseSchema = z.object({
       if (value === "" || value === null || value === undefined) return 0;
       if (typeof value === "string") return Number(value);
       return value;
-    }, z.number().min(0, "El salario no puede ser negativo"))
+    }, z.number().min(0, "El monto de ingreso no puede ser negativo"))
     .optional(),
   homeAddress: z
     .string()
@@ -96,6 +97,14 @@ const managerBaseSchema = z.object({
 });
 
 export const createManagerSchema = managerBaseSchema.superRefine((data, ctx) => {
+  if (!data.branchIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["branchIds"],
+      message: ADMIN_VALIDATION_MESSAGES.branchRequired,
+    });
+  }
+
   if (data.password !== data.passwordConfirm) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -109,7 +118,7 @@ export const createManagerSchema = managerBaseSchema.superRefine((data, ctx) => 
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["salary"],
-      message: "Si no recibe salario, el monto debe ser 0",
+      message: "Si no registra pago, el monto debe ser 0",
     });
   }
 
@@ -117,7 +126,7 @@ export const createManagerSchema = managerBaseSchema.superRefine((data, ctx) => 
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["salary"],
-      message: "Si recibe salario, el monto debe ser mayor a 0",
+      message: "Si registra pago, el monto debe ser mayor a 0",
     });
   }
 
@@ -179,7 +188,7 @@ export const updateManagerSchema = managerBaseSchema
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["salary"],
-          message: "Si no recibe salario, el monto debe ser 0",
+          message: "Si no registra pago, el monto debe ser 0",
         });
       }
 
@@ -187,7 +196,7 @@ export const updateManagerSchema = managerBaseSchema
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["salary"],
-          message: "Si recibe salario, el monto debe ser mayor a 0",
+          message: "Si registra pago, el monto debe ser mayor a 0",
         });
       }
     }

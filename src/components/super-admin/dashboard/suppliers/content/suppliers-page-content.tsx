@@ -9,13 +9,11 @@ import {
   getSuppliers,
   getSupplierMetrics,
   getSupplierOptions,
-  getSupplierHistory,
   saveSupplierAction,
   deleteSupplierAction,
   toggleSupplierStatusAction,
 } from "@/actions/super-admin/suppliers";
 import type {
-  SupplierHistoryRow,
   SupplierRow,
   SupplierMetrics as SupplierMetricsType,
   SupplierBranchOption,
@@ -27,6 +25,7 @@ import { Button } from "@/components/ui/button";
 
 import { SuppliersPageDialogs } from "./suppliers-page-dialogs";
 import { SuppliersTableSection } from "./suppliers-table-section";
+import { SupplierAssignmentsDialog } from "../dialogs";
 
 
 export function SuppliersPageContent() {
@@ -39,9 +38,7 @@ export function SuppliersPageContent() {
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierRow | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyRows, setHistoryRows] = useState<SupplierHistoryRow[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
 
   const fetchData = async () => {
     const [s, m, o] = await Promise.all([
@@ -129,6 +126,10 @@ export function SuppliersPageContent() {
           setSelectedSupplier(s);
           setFormOpen(true);
         }}
+        onManage={(s) => {
+          setSelectedSupplier(s);
+          setManageOpen(true);
+        }}
         onDelete={(s) => {
           setSelectedSupplier(s);
           setDeleteOpen(true);
@@ -138,14 +139,6 @@ export function SuppliersPageContent() {
           setSelectedSupplier(s);
           setDetailsOpen(true);
         }}
-        onViewHistory={async (s) => {
-          setSelectedSupplier(s);
-          setHistoryOpen(true);
-          setHistoryLoading(true);
-          const rows = await getSupplierHistory(s.id);
-          setHistoryRows(rows);
-          setHistoryLoading(false);
-        }}
       />
       <SuppliersPageDialogs
         selectedSupplier={selectedSupplier}
@@ -153,9 +146,6 @@ export function SuppliersPageContent() {
         formOpen={formOpen}
         deleteOpen={deleteOpen}
         detailsOpen={detailsOpen}
-        historyOpen={historyOpen}
-        historyRows={historyRows}
-        historyLoading={historyLoading}
         isPending={isPending}
         onFormOpenChange={setFormOpen}
         onDeleteOpenChange={setDeleteOpen}
@@ -163,15 +153,31 @@ export function SuppliersPageContent() {
           setDetailsOpen(value);
           if (!value) setSelectedSupplier(null);
         }}
-        onHistoryOpenChange={(value) => {
-          setHistoryOpen(value);
-          if (!value) {
-            setSelectedSupplier(null);
-            setHistoryRows([]);
-          }
-        }}
         onSubmit={handleSave}
         onConfirmDelete={confirmDelete}
+      />
+      <SupplierAssignmentsDialog
+        open={manageOpen}
+        onOpenChange={(value) => {
+          setManageOpen(value);
+          if (!value) setSelectedSupplier(null);
+        }}
+        supplier={selectedSupplier}
+        branchOptions={options.branches}
+        managerOptions={options.managers}
+        isPending={isPending}
+        onSave={async (data, id) => {
+          setIsPending(true);
+          const result = await saveSupplierAction(data, id);
+          if (result.success) {
+            toast.success("Asignaciones actualizadas");
+            setManageOpen(false);
+            setSelectedSupplier(null);
+            await fetchData();
+          }
+          setIsPending(false);
+          return result;
+        }}
       />
     </div>
   );

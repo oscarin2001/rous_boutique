@@ -20,12 +20,13 @@ interface Props {
   manager: ManagerRow;
   onView: (manager: ManagerRow) => void;
   onEdit: (manager: ManagerRow) => void;
+  onManage: (manager: ManagerRow) => void;
   onHistory: (manager: ManagerRow) => void;
   onToggleStatus: (manager: ManagerRow) => void;
   onDelete: (manager: ManagerRow) => void;
 }
 
-export function ManagersTableRow({ manager, onView, onEdit, onHistory, onToggleStatus, onDelete }: Props) {
+export function ManagersTableRow({ manager, onView, onEdit, onManage, onHistory, onToggleStatus, onDelete }: Props) {
   const status = getManagerStatusInfo(manager.status);
 
   return (
@@ -66,6 +67,10 @@ export function ManagersTableRow({ manager, onView, onEdit, onHistory, onToggleS
             <DropdownMenuItem onClick={() => onEdit(manager)}>
               <Edit className="mr-2 size-4" />
               Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onManage(manager)}>
+              <Building2 className="mr-2 size-4" />
+              Gestionar asignaciones
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onHistory(manager)}>
               <History className="mr-2 size-4" />

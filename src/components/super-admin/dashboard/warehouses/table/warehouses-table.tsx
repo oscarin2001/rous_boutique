@@ -12,11 +12,12 @@ interface Props {
   rows: WarehouseRow[];
   onView: (row: WarehouseRow) => void;
   onEdit: (row: WarehouseRow) => void;
+  onManage: (row: WarehouseRow) => void;
   onHistory: (row: WarehouseRow) => void;
   onDelete: (row: WarehouseRow) => void;
 }
 
-export function WarehousesTable({ rows, onView, onEdit, onHistory, onDelete }: Props) {
+export function WarehousesTable({ rows, onView, onEdit, onManage, onHistory, onDelete }: Props) {
   return (
     <div className="rounded-xl bg-card shadow-sm">
       <Table>
@@ -53,6 +54,7 @@ export function WarehousesTable({ rows, onView, onEdit, onHistory, onDelete }: P
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onView(row)}>Ver detalle</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onEdit(row)}>Editar</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onManage(row)}>Gestionar asignaciones</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onHistory(row)}>Historial</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onDelete(row)} variant="destructive">Eliminar</DropdownMenuItem>
                   </DropdownMenuContent>

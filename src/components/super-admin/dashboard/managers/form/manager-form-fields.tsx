@@ -12,10 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { HUMAN_NAME_REGEX } from "@/lib/field-validation";
 import { MANAGER_EMAIL_DOMAIN, extractManagerUsername, normalizeManagerUsername } from "@/lib/manager-email";
 
 type FieldErrors = Partial<Record<ManagerFormField, string>>;
+
+const MAX_MANAGERS_PER_BRANCH = 2;
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -201,7 +204,7 @@ export function ManagerFormFields({
         </div>
 
         <div className="space-y-2">
-          <Label className="mb-1 block" htmlFor="receivesSalary">Recibe salario</Label>
+          <Label className="mb-1 block" htmlFor="receivesSalary">Registro de pago de ingreso</Label>
           <div className="flex items-center gap-2 rounded-md border border-input px-3 py-2">
             <Checkbox
               id="receivesSalary"
@@ -212,7 +215,7 @@ export function ManagerFormFields({
               }}
             />
             <Label htmlFor="receivesSalary" className="cursor-pointer text-sm font-normal">
-              {receivesSalary ? "Si, recibe salario" : "No, no recibe salario"}
+              {receivesSalary ? "Si, pago de ingreso registrado" : "No, sin pago de ingreso"}
             </Label>
           </div>
           <input type="hidden" name="receivesSalary" value={String(receivesSalary)} />
@@ -220,7 +223,7 @@ export function ManagerFormFields({
         </div>
 
         <div>
-          <Label className="mb-1 block" htmlFor="salary">Salario (BOL)</Label>
+          <Label className="mb-1 block" htmlFor="salary">Monto de ingreso (BOL)</Label>
           <Input
             id="salary"
             name="salary"
@@ -273,6 +276,8 @@ export function ManagerFormFields({
           <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
             {branchOptions.map((branch) => {
               const isChecked = selectedSet.has(branch.id);
+              const isSaturated = branch.assignedManagerCount >= MAX_MANAGERS_PER_BRANCH;
+              const isDisabled = isSaturated && !isChecked;
               const id = `branch-${branch.id}`;
               return (
                 <div
@@ -282,6 +287,7 @@ export function ManagerFormFields({
                   <Checkbox
                     id={id}
                     checked={isChecked}
+                    disabled={isDisabled}
                     onCheckedChange={() => toggleBranch(branch.id)}
                   />
                   <Label
@@ -291,8 +297,11 @@ export function ManagerFormFields({
                     {branch.name} - {branch.city}
                     {branch.assignedManagerCount > 0 ? (
                       <span className="ml-1 text-xs text-muted-foreground">
-                        ({branch.assignedManagerCount} encargado(s))
+                        ({branch.assignedManagerCount}/{MAX_MANAGERS_PER_BRANCH} encargado(s))
                       </span>
+                    ) : null}
+                    {isDisabled ? (
+                      <span className="ml-1 text-xs text-destructive">({ADMIN_VALIDATION_MESSAGES.maxManagersPerBranch})</span>
                     ) : null}
                   </Label>
                 </div>
@@ -300,6 +309,9 @@ export function ManagerFormFields({
             })}
           </div>
         )}
+        <p className="text-xs text-muted-foreground">
+          {ADMIN_VALIDATION_MESSAGES.maxManagersPerBranch}
+        </p>
         {selectedBranchIds.map((branchId) => (
           <input key={branchId} type="hidden" name="branchIds" value={String(branchId)} />
         ))}

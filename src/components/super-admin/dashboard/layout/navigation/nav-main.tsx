@@ -36,7 +36,9 @@ export function NavMain({ groups }: NavMainProps) {
     <>
       {groups.map((group) => (
         <SidebarGroup key={group.label}>
-          <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-2 text-xs font-semibold tracking-wide text-muted-foreground/90 uppercase">
+            {group.label}
+          </SidebarGroupLabel>
           <SidebarMenu>
             {group.items.length === 1 ? (
               <SingleItem item={group.items[0]} pathname={pathname} />
@@ -94,7 +96,7 @@ function CollapsibleGroup({
       <SidebarMenuItem>
         <CollapsibleTrigger render={<SidebarMenuButton tooltip={group.label} />}>
           {GroupIcon && <GroupIcon className="size-4" />}
-          <span>{group.label}</span>
+          <span className="font-semibold">{group.dropdownTitle ?? group.label}</span>
           <ChevronRight className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -104,8 +106,10 @@ function CollapsibleGroup({
                 <SidebarMenuSubButton
                   render={<Link href={item.url} />}
                   isActive={pathname === item.url}
+                  className="gap-2"
                 >
-                  {item.title}
+                  {item.icon ? <item.icon className="size-3.5" /> : null}
+                  <span>{item.title}</span>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             ))}

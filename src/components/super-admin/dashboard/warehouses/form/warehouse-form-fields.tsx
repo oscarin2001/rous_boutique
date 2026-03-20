@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { BOLIVIA_COUNTRY, BOLIVIA_DEPARTMENTS } from "@/lib/bolivia";
 import { PLACE_NAME_REGEX } from "@/lib/field-validation";
 
@@ -56,8 +57,8 @@ export function WarehouseFormFields({ row, branches, managers, selectedBranchIds
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg bg-muted/20 p-3"><p className="mb-2 text-sm font-medium">Sucursales</p>{branches.map((b) => <label key={b.id} className="flex items-center gap-2 py-1 text-sm"><Checkbox checked={selectedBranchIds.includes(b.id)} onCheckedChange={() => toggle(b.id, selectedBranchIds, onSelectedBranchIdsChange)} />{b.name} ({b.city})</label>)}{selectedBranchIds.map((id) => <input key={id} type="hidden" name="branchIds" value={id} />)}</div>
-        <div className="rounded-lg bg-muted/20 p-3"><p className="mb-2 text-sm font-medium">Encargados</p>{managers.map((m) => <label key={m.id} className="flex items-center gap-2 py-1 text-sm"><Checkbox checked={selectedManagerIds.includes(m.id)} onCheckedChange={() => toggle(m.id, selectedManagerIds, onSelectedManagerIdsChange)} />{m.fullName}</label>)}{selectedManagerIds.map((id) => <input key={id} type="hidden" name="managerIds" value={id} />)}</div>
+        <div className="rounded-lg bg-muted/20 p-3"><p className="mb-2 text-sm font-medium">Sucursales</p>{branches.map((b) => <label key={b.id} className="flex items-center gap-2 py-1 text-sm"><Checkbox checked={selectedBranchIds.includes(b.id)} onCheckedChange={() => toggle(b.id, selectedBranchIds, onSelectedBranchIdsChange)} />{b.name} ({b.city})</label>)}{selectedBranchIds.map((id) => <input key={id} type="hidden" name="branchIds" value={id} />)}<p className="mt-1 text-[11px] text-muted-foreground">{ADMIN_VALIDATION_MESSAGES.branchRequired}</p>{errors.branchIds ? <p className="text-xs text-destructive">{errors.branchIds}</p> : null}</div>
+        <div className="rounded-lg bg-muted/20 p-3"><p className="mb-2 text-sm font-medium">Encargados</p>{managers.map((m) => <label key={m.id} className="flex items-center gap-2 py-1 text-sm"><Checkbox checked={selectedManagerIds.includes(m.id)} onCheckedChange={() => toggle(m.id, selectedManagerIds, onSelectedManagerIdsChange)} />{m.fullName}</label>)}{selectedManagerIds.map((id) => <input key={id} type="hidden" name="managerIds" value={id} />)}{errors.managerIds ? <p className="text-xs text-destructive">{errors.managerIds}</p> : null}</div>
       </div>
     </div>
   );

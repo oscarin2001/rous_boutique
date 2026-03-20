@@ -51,6 +51,8 @@ export interface WarehouseHistoryRow {
   id: number;
   action: "CREATE" | "UPDATE" | "DELETE";
   actorName: string;
+  oldValue: string | null;
+  newValue: string | null;
   createdAt: string;
 }
 

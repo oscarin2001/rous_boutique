@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createWarehouse, deleteWarehouse, getWarehouseHistory, updateWarehouse } from "@/actions/super-admin/warehouses";
 import type { WarehouseHistoryRow, WarehouseMetrics, WarehouseOptionBranch, WarehouseOptionManager, WarehouseRow } from "@/actions/super-admin/warehouses/types";
 
+import { WarehouseAssignmentsDialog } from "../dialogs/warehouse-assignments-dialog";
 import { WarehouseDeleteDialog } from "../dialogs/warehouse-delete-dialog";
 import { WarehouseDetailsDialog } from "../dialogs/warehouse-details-dialog";
 import { WarehouseHistoryDialog } from "../dialogs/warehouse-history-dialog";
@@ -26,6 +27,7 @@ export function WarehousesPageContent({ initialRows, options }: Props) {
   const [selected, setSelected] = useState<WarehouseRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [historyRows, setHistoryRows] = useState<WarehouseHistoryRow[]>([]);
@@ -49,11 +51,34 @@ export function WarehousesPageContent({ initialRows, options }: Props) {
     <div className="space-y-6">
       <WarehousesMetrics metrics={metrics} />
       <WarehousesFilters search={search} onSearchChange={setSearch} onCreate={() => { setSelected(null); setFormOpen(true); }} />
-      <WarehousesTable rows={filtered} onView={(r) => { setSelected(r); setDetailsOpen(true); }} onEdit={(r) => { setSelected(r); setFormOpen(true); }} onHistory={(r) => { setSelected(r); setHistoryOpen(true); setHistoryLoading(true); startTransition(async () => { setHistoryRows(await getWarehouseHistory(r.id)); setHistoryLoading(false); }); }} onDelete={(r) => { setSelected(r); setDeleteOpen(true); }} />
+      <WarehousesTable rows={filtered} onView={(r) => { setSelected(r); setDetailsOpen(true); }} onEdit={(r) => { setSelected(r); setFormOpen(true); }} onManage={(r) => { setSelected(r); setManageOpen(true); }} onHistory={(r) => { setSelected(r); setHistoryOpen(true); setHistoryLoading(true); startTransition(async () => { setHistoryRows(await getWarehouseHistory(r.id)); setHistoryLoading(false); }); }} onDelete={(r) => { setSelected(r); setDeleteOpen(true); }} />
 
       <WarehouseFormDialog open={formOpen} onOpenChange={setFormOpen} row={selected} branches={options.branches} managers={options.managers} isPending={isPending} onSubmit={(data, id) => new Promise((resolve) => { startTransition(async () => { const result = id ? await updateWarehouse(id, data) : await createWarehouse(data); if (result.success && result.warehouse) { setRows((prev) => (id ? prev.map((p) => (p.id === result.warehouse!.id ? result.warehouse! : p)) : [result.warehouse!, ...prev])); setFormOpen(false); setSelected(null); toast.success(id ? "Bodega actualizada" : "Bodega creada"); } else if (!result.fieldErrors) toast.error(result.error || "No se pudo guardar"); resolve(result); }); })} />
 
       <WarehouseDetailsDialog row={selected} open={detailsOpen} onOpenChange={setDetailsOpen} />
+      <WarehouseAssignmentsDialog
+        open={manageOpen}
+        onOpenChange={(value) => {
+          setManageOpen(value);
+          if (!value) setSelected(null);
+        }}
+        row={selected}
+        branchOptions={options.branches}
+        managerOptions={options.managers}
+        isPending={isPending}
+        onSave={(data, id) => new Promise((resolve) => { startTransition(async () => {
+          const result = await updateWarehouse(id, data);
+          if (result.success && result.warehouse) {
+            setRows((prev) => prev.map((p) => (p.id === result.warehouse!.id ? result.warehouse! : p)));
+            setManageOpen(false);
+            setSelected(null);
+            toast.success("Asignaciones actualizadas");
+          } else if (!result.fieldErrors) {
+            toast.error(result.error || "No se pudieron guardar asignaciones");
+          }
+          resolve(result);
+        }); })}
+      />
       <WarehouseHistoryDialog open={historyOpen} onOpenChange={(v) => { setHistoryOpen(v); if (!v) setHistoryRows([]); }} loading={historyLoading} rows={historyRows} />
       <WarehouseDeleteDialog row={selected} open={deleteOpen} onOpenChange={setDeleteOpen} isPending={isPending} onConfirm={(password) => startTransition(async () => { if (!selected) return; const result = await deleteWarehouse(selected.id, password); if (result.success) { setRows((prev) => prev.filter((p) => p.id !== selected.id)); setDeleteOpen(false); setSelected(null); toast.success("Bodega eliminada"); } else toast.error(result.error || "No se pudo eliminar"); })} />
     </div>

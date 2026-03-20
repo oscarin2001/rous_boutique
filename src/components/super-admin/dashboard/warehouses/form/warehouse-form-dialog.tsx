@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
+import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { BOLIVIA_COUNTRY, BOLIVIA_DEPARTMENTS } from "@/lib/bolivia";
 import { PLACE_NAME_REGEX, isValidIsoDate } from "@/lib/field-validation";
 
@@ -42,7 +43,7 @@ function fmtDateTime(value: string | null): string {
 
 export function WarehouseFormDialog({ open, onOpenChange, row, branches, managers, onSubmit, isPending }: Props) {
   const isEdit = !!row;
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
   const [selectedManagerIds, setSelectedManagerIds] = useState<number[]>([]);
@@ -69,6 +70,9 @@ export function WarehouseFormDialog({ open, onOpenChange, row, branches, manager
     const department = String(data.department ?? "");
     const country = String(data.country ?? "");
     const openedAt = String(data.openedAt ?? "");
+    const branchIds = Array.isArray(data.branchIds) ? (data.branchIds as number[]) : [];
+
+    if (!isEdit && branchIds.length === 0) next.branchIds = ADMIN_VALIDATION_MESSAGES.branchRequired;
 
     if (name.length < 2) next.name = "Minimo 2 caracteres";
     if (name.length > 80) next.name = "Maximo 80 caracteres";
@@ -112,6 +116,8 @@ export function WarehouseFormDialog({ open, onOpenChange, row, branches, manager
   const handleConfirm = async () => {
     if (!row || !draft) return;
     if (confirmName.trim().toLowerCase() !== row.name.toLowerCase()) return setConfirmMessage("El nombre no coincide.");
+    if (!confirmPassword.trim()) return setConfirmMessage(ADMIN_VALIDATION_MESSAGES.adminPasswordRequired);
+    setConfirmMessage(null);
     const result = await onSubmit({ ...draft, confirmPassword }, row.id);
     if (!result.success) setConfirmMessage(result.error || "No se pudo confirmar la edicion");
   };
@@ -124,9 +130,9 @@ export function WarehouseFormDialog({ open, onOpenChange, row, branches, manager
             {isEdit ? <SquarePen className="size-5 text-primary" /> : <PlusCircle className="size-5 text-primary" />}
             {isEdit ? "Editar Bodega" : "Nueva Bodega"}
           </DialogTitle>
-          <DialogDescription>{isEdit ? "Revisa y confirma en 3 pasos" : "Completa los datos de la bodega"}</DialogDescription>
+          <DialogDescription>{isEdit ? "Revisa y confirma en 2 pasos" : "Completa los datos de la bodega"}</DialogDescription>
         </DialogHeader>
-        {isEdit ? <div className="mb-2 flex gap-2">{[1, 2, 3].map((s) => <div key={s} className={`h-1.5 flex-1 rounded-full ${step >= s ? "bg-primary" : "bg-muted"}`} />)}</div> : null}
+        {isEdit ? <div className="mb-2 flex gap-2">{[1, 2].map((s) => <div key={s} className={`h-1.5 flex-1 rounded-full ${step >= s ? "bg-primary" : "bg-muted"}`} />)}</div> : null}
         {step === 1 ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <WarehouseFormFields row={row} branches={branches} managers={managers} selectedBranchIds={selectedBranchIds} selectedManagerIds={selectedManagerIds} onSelectedBranchIdsChange={setSelectedBranchIds} onSelectedManagerIdsChange={setSelectedManagerIds} errors={errors} />
@@ -142,10 +148,8 @@ export function WarehouseFormDialog({ open, onOpenChange, row, branches, manager
             <DialogFooter><Button type="submit" disabled={isPending}>{isPending ? "Guardando..." : isEdit ? "Revisar Cambios" : "Crear Bodega"}</Button></DialogFooter>
           </form>
         ) : step === 2 ? (
-          <div className="space-y-3"><div className="rounded-lg border p-3 text-sm">{changes.map((c) => <p key={`${c.label}-${c.from}-${c.to}`}><strong>{c.label}:</strong> {c.from} {"->"} {c.to}</p>)}</div>{confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}<DialogFooter><Button variant="outline" onClick={() => setStep(1)}>Atras</Button><Button onClick={() => setStep(3)}>Siguiente</Button></DialogFooter></div>
-        ) : (
-          <div className="space-y-3"><Label htmlFor="wh-confirm-name">Escribe {row?.name} para confirmar</Label><Input id="wh-confirm-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} /><Label htmlFor="wh-confirm-password">Contrasena de administrador</Label><PasswordInput id="wh-confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />{confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}<DialogFooter><Button variant="outline" onClick={() => setStep(2)}>Atras</Button><Button onClick={handleConfirm} disabled={isPending}>{isPending ? "Confirmando..." : "Confirmar Edicion"}</Button></DialogFooter></div>
-        )}
+          <div className="space-y-3"><div className="rounded-lg border p-3 text-sm">{changes.map((c) => <p key={`${c.label}-${c.from}-${c.to}`}><strong>{c.label}:</strong> {c.from} {"->"} {c.to}</p>)}</div><Label htmlFor="wh-confirm-name">Escribe {row?.name} para confirmar</Label><Input id="wh-confirm-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} /><Label htmlFor="wh-confirm-password">Contrasena de administrador</Label><PasswordInput id="wh-confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />{confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}<DialogFooter><Button variant="outline" onClick={() => setStep(1)}>Atras</Button><Button onClick={handleConfirm} disabled={isPending}>{isPending ? "Confirmando..." : "Confirmar Edicion"}</Button></DialogFooter></div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
