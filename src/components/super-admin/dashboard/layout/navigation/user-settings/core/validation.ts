@@ -24,6 +24,7 @@ export function validateProfile(value: ProfileForm): ProfileFieldErrors {
   if (value.photoUrl && !/^https?:\/\//i.test(value.photoUrl.trim()) && !value.photoUrl.trim().startsWith("/")) errors.photoUrl = "URL de foto invalida";
   if (value.aboutMe && value.aboutMe.trim().length > 600) errors.aboutMe = "Sobre mi demasiado largo";
   if (value.skills && value.skills.trim().length > 300) errors.skills = "Habilidades demasiado largas";
+  if (value.languages && value.languages.trim().length > 500) errors.languages = "Idiomas demasiado largos";
 
   if (!/^[a-z0-9._@-]{3,60}$/.test(value.username)) errors.username = "Usuario invalido";
   if (value.newPassword && value.newPassword.length < 8) errors.newPassword = "Minimo 8 caracteres";

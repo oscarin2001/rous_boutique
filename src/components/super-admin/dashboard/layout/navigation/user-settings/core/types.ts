@@ -16,6 +16,7 @@ export type ProfileForm = {
   photoUrl: string;
   aboutMe: string;
   skills: string;
+  languages: string;
   initialUsername: string;
   username: string;
   newPassword: string;
@@ -60,7 +61,7 @@ export type CreateSuperAdminForm = {
   passwordConfirm: string;
 };
 
-export type ProfileFieldErrors = Partial<Record<"firstName" | "lastName" | "birthDate" | "phone" | "ci" | "profession" | "photoUrl" | "aboutMe" | "skills" | "username" | "currentPassword" | "newPassword" | "newPasswordConfirm", string>>;
+export type ProfileFieldErrors = Partial<Record<"firstName" | "lastName" | "birthDate" | "phone" | "ci" | "profession" | "photoUrl" | "aboutMe" | "skills" | "languages" | "username" | "currentPassword" | "newPassword" | "newPasswordConfirm", string>>;
 export type CreateAccountFieldErrors = Partial<Record<keyof CreateSuperAdminForm, string>>;
 
 export type SessionRow = {

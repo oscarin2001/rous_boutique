@@ -8,7 +8,6 @@ import {
 import { redirect } from "next/navigation";
 
 import { ProfileAvatarUploader } from "@/components/super-admin/dashboard/me/content/profile-avatar-uploader";
-import { SkillsLanguagesPanel } from "@/components/super-admin/dashboard/me/content/skills-languages-panel";
 import { Progress } from "@/components/ui/progress";
 
 import { prisma } from "@/lib/prisma";
@@ -38,6 +37,15 @@ type LanguageRow = {
   level: LanguageLevel;
   certification: string;
 };
+
+function cefrToProgress(level: LanguageLevel) {
+  if (level === "C2") return 100;
+  if (level === "C1") return 85;
+  if (level === "B2") return 70;
+  if (level === "B1") return 55;
+  if (level === "A2") return 35;
+  return 20;
+}
 
 function parseLanguages(raw: string | null | undefined, fallbackLanguageCode: string): LanguageRow[] {
   if (raw) {
@@ -113,6 +121,12 @@ export async function MePage() {
   const username = employee.auth.username;
   const skills = parseSkills(employee.skills);
   const languages = parseLanguages(employee.languages, employee.language);
+  const skillsText = skills.length
+    ? skills.map((item) => `${item.name} (${item.level}%)`).join(", ")
+    : "Sin habilidades registradas.";
+  const languagesText = languages.length
+    ? languages.map((item) => `${item.name} ${item.level}`).join(", ")
+    : "Sin idiomas registrados.";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[330px_1fr]">
@@ -149,15 +163,22 @@ export async function MePage() {
             </div>
           )) : <p className="text-xs text-muted-foreground">Sin habilidades registradas.</p>}
         </div>
+        <div className="space-y-2 rounded-lg bg-muted/40 p-3">
+          <p className="text-xs font-semibold uppercase text-muted-foreground">Idiomas</p>
+          {languages.length ? languages.map((item) => (
+            <div key={`${item.code}-${item.level}`}>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span>{item.name}</span>
+                <span className="text-muted-foreground">{item.level}</span>
+              </div>
+              <Progress value={cefrToProgress(item.level)} />
+            </div>
+          )) : <p className="text-xs text-muted-foreground">Sin idiomas registrados.</p>}
+        </div>
       </aside>
 
       <section className="space-y-4">
         <div className="rounded-xl bg-card/70 p-4 shadow-sm ring-0">
-          <div className="mb-4 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-md bg-muted px-2 py-1 font-medium">ABOUT ME</span>
-            <span className="rounded-md bg-muted/70 px-2 py-1 text-muted-foreground">SEGURIDAD</span>
-            <span className="rounded-md bg-muted/70 px-2 py-1 text-muted-foreground">SETTINGS</span>
-          </div>
           <h2 className="text-sm font-semibold">Datos personales y preferencias</h2>
           <p className="mt-2 text-sm text-muted-foreground">{employee.aboutMe?.trim() || "Sin descripcion personal registrada."}</p>
           <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
@@ -169,9 +190,12 @@ export async function MePage() {
             <p><span className="text-muted-foreground">Moneda:</span> {employee.employeeSettings?.currency ?? "BOB"}</p>
             <p><span className="text-muted-foreground">Notificaciones:</span> {employee.employeeSettings ? "Configuradas" : "Por defecto"}</p>
           </div>
+          <div className="mt-4 rounded-lg bg-muted/40 p-3 text-sm">
+            <p><span className="font-medium">Perfil profesional:</span> {employee.profession ?? "No registrado"}. {employee.aboutMe?.trim() || "Completa tu descripcion en User Settings para un perfil mas completo."}</p>
+            <p className="mt-2"><span className="font-medium">Idiomas:</span> {languagesText}</p>
+            <p className="mt-2"><span className="font-medium">Habilidades clave:</span> {skillsText}</p>
+          </div>
         </div>
-
-        <SkillsLanguagesPanel skills={skills} languages={languages} />
       </section>
     </div>
   );

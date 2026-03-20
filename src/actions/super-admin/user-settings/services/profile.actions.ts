@@ -42,6 +42,56 @@ async function deleteManagedPhotoFile(photoUrl: string | null | undefined) {
   }
 }
 
+type LanguageLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+
+type LanguageRow = {
+  name: string;
+  code: string;
+  level: LanguageLevel;
+  certification: string;
+};
+
+function formatLanguagesForInput(raw: string | null | undefined) {
+  if (!raw) return "";
+
+  try {
+    const parsed = JSON.parse(raw) as LanguageRow[];
+    if (!Array.isArray(parsed)) return "";
+    return parsed
+      .map((item) => `${item.name}:${item.level}:${item.certification || "Sin certificacion"}`)
+      .join(", ");
+  } catch {
+    return "";
+  }
+}
+
+function parseLanguagesFromInput(raw: string | null | undefined) {
+  const text = (raw ?? "").trim();
+  if (!text) return null;
+
+  const rows = text
+    .split(",")
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .map((chunk, index) => {
+      const [namePart, levelPart, certificationPart] = chunk.split(":");
+      const name = (namePart ?? "").trim() || `Idioma ${index + 1}`;
+      const level = (levelPart ?? "A1").trim().toUpperCase();
+      const normalizedLevel: LanguageLevel = ["A1", "A2", "B1", "B2", "C1", "C2"].includes(level)
+        ? (level as LanguageLevel)
+        : "A1";
+
+      return {
+        name,
+        code: name.slice(0, 2).toLowerCase(),
+        level: normalizedLevel,
+        certification: (certificationPart ?? "Sin certificacion").trim() || "Sin certificacion",
+      };
+    });
+
+  return rows.length ? JSON.stringify(rows) : null;
+}
+
 export async function uploadSuperAdminProfilePhotoAction(file: File) {
   const session = await ensureSuperAdminSession();
   if (!session) return { success: false, error: "No autorizado" };
@@ -111,6 +161,7 @@ export async function getSuperAdminProfileAction() {
       photoUrl: true,
       aboutMe: true,
       skills: true,
+      languages: true,
       auth: { select: { id: true, username: true, lastLogin: true } },
     },
   });
@@ -131,6 +182,7 @@ export async function getSuperAdminProfileAction() {
       photoUrl: employee.photoUrl ?? "",
       aboutMe: employee.aboutMe ?? "",
       skills: employee.skills ?? "",
+      languages: formatLanguagesForInput(employee.languages),
       username: employee.auth.username,
       lastLogin: employee.auth.lastLogin?.toISOString() ?? null,
       canChangeCredentials: credentialWindow.canChange,
@@ -152,7 +204,7 @@ export async function updateSuperAdminProfileAction(input: UpdateProfileInput) {
 
   const existing = await prisma.employee.findUnique({
     where: { id: session.employeeId },
-    select: { id: true, firstName: true, lastName: true, birthDate: true, phone: true, ci: true, profession: true, photoUrl: true, aboutMe: true, skills: true, role: { select: { code: true } }, auth: { select: { id: true, username: true, password: true } } },
+    select: { id: true, firstName: true, lastName: true, birthDate: true, phone: true, ci: true, profession: true, photoUrl: true, aboutMe: true, skills: true, languages: true, role: { select: { code: true } }, auth: { select: { id: true, username: true, password: true } } },
   });
   if (!existing) return { success: false, error: "Perfil no encontrado" };
 
@@ -177,11 +229,12 @@ export async function updateSuperAdminProfileAction(input: UpdateProfileInput) {
   }
 
   const normalizedPhotoUrl = parsed.data.photoUrl || null;
+  const normalizedLanguages = parseLanguagesFromInput(parsed.data.languages);
 
   await prisma.$transaction(async (tx) => {
-    await tx.employee.update({ where: { id: existing.id }, data: { firstName: parsed.data.firstName, lastName: parsed.data.lastName, birthDate, phone: parsed.data.phone || null, ci: parsed.data.ci, profession: parsed.data.profession || null, photoUrl: normalizedPhotoUrl, aboutMe: parsed.data.aboutMe || null, skills: parsed.data.skills || null } });
+    await tx.employee.update({ where: { id: existing.id }, data: { firstName: parsed.data.firstName, lastName: parsed.data.lastName, birthDate, phone: parsed.data.phone || null, ci: parsed.data.ci, profession: parsed.data.profession || null, photoUrl: normalizedPhotoUrl, aboutMe: parsed.data.aboutMe || null, skills: parsed.data.skills || null, languages: normalizedLanguages } });
     if (credentialsChanged) await tx.auth.update({ where: { id: existing.auth.id }, data: { username: parsed.data.username, password: passwordChanged ? await bcrypt.hash(parsed.data.newPassword as string, 12) : undefined } });
-    await tx.auditLog.create({ data: { entity: "SuperAdminProfile", entityId: existing.id, action: "UPDATE", employeeId: existing.id, oldValue: JSON.stringify({ firstName: existing.firstName, lastName: existing.lastName, birthDate: existing.birthDate?.toISOString() ?? null, phone: existing.phone, ci: existing.ci, profession: existing.profession ?? null, photoUrl: existing.photoUrl ?? null, aboutMe: existing.aboutMe ?? null, skills: existing.skills ?? null }), newValue: JSON.stringify({ firstName: parsed.data.firstName, lastName: parsed.data.lastName, birthDate: birthDate.toISOString(), phone: parsed.data.phone || null, ci: parsed.data.ci, profession: parsed.data.profession || null, photoUrl: normalizedPhotoUrl, aboutMe: parsed.data.aboutMe || null, skills: parsed.data.skills || null }) } });
+    await tx.auditLog.create({ data: { entity: "SuperAdminProfile", entityId: existing.id, action: "UPDATE", employeeId: existing.id, oldValue: JSON.stringify({ firstName: existing.firstName, lastName: existing.lastName, birthDate: existing.birthDate?.toISOString() ?? null, phone: existing.phone, ci: existing.ci, profession: existing.profession ?? null, photoUrl: existing.photoUrl ?? null, aboutMe: existing.aboutMe ?? null, skills: existing.skills ?? null, languages: existing.languages ?? null }), newValue: JSON.stringify({ firstName: parsed.data.firstName, lastName: parsed.data.lastName, birthDate: birthDate.toISOString(), phone: parsed.data.phone || null, ci: parsed.data.ci, profession: parsed.data.profession || null, photoUrl: normalizedPhotoUrl, aboutMe: parsed.data.aboutMe || null, skills: parsed.data.skills || null, languages: normalizedLanguages }) } });
     if (credentialsChanged) await tx.auditLog.create({ data: { entity: "SuperAdminCredentials", entityId: existing.auth.id, action: "UPDATE", employeeId: existing.id, oldValue: JSON.stringify({ username: existing.auth.username, passwordChanged: false }), newValue: JSON.stringify({ username: parsed.data.username, passwordChanged }) } });
   });
 

@@ -25,6 +25,7 @@ export const updateProfileSchema = z.object({
     .refine((v) => !v || /^https?:\/\//i.test(v) || v.startsWith("/"), "URL de foto invalida"),
   aboutMe: z.string().trim().max(600, "Sobre mi no puede exceder 600 caracteres").optional().or(z.literal("")),
   skills: z.string().trim().max(300, "Habilidades no puede exceder 300 caracteres").optional().or(z.literal("")),
+  languages: z.string().trim().max(500, "Idiomas no puede exceder 500 caracteres").optional().or(z.literal("")),
   username: z
     .string()
     .trim()

@@ -101,6 +101,7 @@ export function ProfileTab({
         <div><Label htmlFor="lastLogin">Ultimo acceso</Label><Input id="lastLogin" value={profile.lastLogin ? new Date(profile.lastLogin).toLocaleString("es-BO") : "Sin registro"} disabled readOnly /></div>
         <div className="sm:col-span-2"><Label htmlFor="aboutMe">Sobre mi</Label><Textarea id="aboutMe" disabled={!isEditable} value={profile.aboutMe} onChange={(e) => { setProfile((v) => ({ ...v, aboutMe: e.target.value.slice(0, 600) })); clear("aboutMe"); }} rows={4} />{profileErrors.aboutMe ? <p className="mt-1 text-xs text-destructive">{profileErrors.aboutMe}</p> : null}</div>
         <div className="sm:col-span-2"><Label htmlFor="skills">Habilidades (ej: Liderazgo:85, Inventario:78, Ventas:90)</Label><Input id="skills" disabled={!isEditable} value={profile.skills} onChange={(e) => { setProfile((v) => ({ ...v, skills: e.target.value.slice(0, 300) })); clear("skills"); }} />{profileErrors.skills ? <p className="mt-1 text-xs text-destructive">{profileErrors.skills}</p> : null}</div>
+        <div className="sm:col-span-2"><Label htmlFor="languages">Idiomas (ej: Espanol:C2:Nativo, Ingles:B2:IELTS)</Label><Input id="languages" disabled={!isEditable} value={profile.languages} onChange={(e) => { setProfile((v) => ({ ...v, languages: e.target.value.slice(0, 500) })); clear("languages"); }} />{profileErrors.languages ? <p className="mt-1 text-xs text-destructive">{profileErrors.languages}</p> : null}</div>
       </div>
 
       <div className="space-y-2 rounded-xl bg-card/80 p-4 shadow-sm ring-1 ring-border/40">

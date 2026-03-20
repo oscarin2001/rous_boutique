@@ -19,7 +19,7 @@ import {
 import { validateCreateAccount, validateProfile } from "../core";
 import type { AuditFeedRow, CreateAccountFieldErrors, CreateSuperAdminForm, ProfileFieldErrors, ProfileForm, SensitiveAction, SessionRow, SystemForm, TabId } from "../core";
 
-const initialProfile: ProfileForm = { firstName: "", lastName: "", birthDate: "", phone: "", ci: "", profession: "", photoUrl: "", aboutMe: "", skills: "", initialUsername: "", username: "", newPassword: "", newPasswordConfirm: "", lastLogin: null, canChangeCredentials: true, lastCredentialChangeAt: null, nextCredentialChangeAt: null };
+const initialProfile: ProfileForm = { firstName: "", lastName: "", birthDate: "", phone: "", ci: "", profession: "", photoUrl: "", aboutMe: "", skills: "", languages: "", initialUsername: "", username: "", newPassword: "", newPasswordConfirm: "", lastLogin: null, canChangeCredentials: true, lastCredentialChangeAt: null, nextCredentialChangeAt: null };
 const initialSystem: SystemForm = { theme: "system", language: "es", notifications: true, timezone: "America/La_Paz", dateFormat: "DD/MM/YYYY", timeFormat: "24h", currency: "BOB", sessionTtlMinutes: 480, emergencyPhone: "", emergencyContactName: "", emergencyContactPhone: "", signatureDisplayName: "", signatureTitle: "", notificationChannels: { login: true, create: true, update: true, delete: true, security: true } };
 const initialCreate: CreateSuperAdminForm = { firstName: "", lastName: "", birthDate: "", ci: "", phone: "", username: "", password: "", passwordConfirm: "" };
 
@@ -57,6 +57,7 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
     profile.photoUrl !== profileSnapshot.photoUrl ||
     profile.aboutMe !== profileSnapshot.aboutMe ||
     profile.skills !== profileSnapshot.skills ||
+    profile.languages !== profileSnapshot.languages ||
     profile.username !== profileSnapshot.username ||
     Boolean(profile.newPassword) ||
     Boolean(profile.newPasswordConfirm);

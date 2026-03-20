@@ -1,14 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { toast } from "sonner";
-
-import { updateSuperAdminCompetenciesAction } from "@/actions/super-admin/me/competencies.actions";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,13 +17,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -86,36 +73,12 @@ function languageTone(level: LanguageItem["level"]) {
 }
 
 export function SkillsLanguagesPanel({ skills, languages }: Props) {
-  const [editableSkills, setEditableSkills] = useState(skills);
-  const [editableLanguages, setEditableLanguages] = useState(languages);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const chartData = editableSkills.slice(0, 6).map((item) => ({
+  const chartData = skills.slice(0, 6).map((item) => ({
     skill: item.name,
     level: item.level,
   }));
 
-  const topBadges = editableSkills.slice(0, 6);
-  const payloadFingerprint = JSON.stringify({ skills: editableSkills, languages: editableLanguages });
-  const initialFingerprint = useMemo(() => JSON.stringify({ skills, languages }), [skills, languages]);
-  const hasChanges = payloadFingerprint !== initialFingerprint;
-
-  const saveCompetencies = async () => {
-    if (!hasChanges || isSaving) return;
-    setIsSaving(true);
-    const result = await updateSuperAdminCompetenciesAction({
-      skills: editableSkills,
-      languages: editableLanguages,
-    });
-    setIsSaving(false);
-
-    if (!result.success) {
-      toast.error(result.error ?? "No se pudieron guardar los cambios");
-      return;
-    }
-
-    toast.success("Skills e idiomas guardados");
-  };
+  const topBadges = skills.slice(0, 6);
 
   return (
     <Card className="bg-card/70 shadow-sm ring-0">
@@ -138,35 +101,13 @@ export function SkillsLanguagesPanel({ skills, languages }: Props) {
             </div>
 
             <div className="space-y-2">
-              {editableSkills.length ? editableSkills.map((skill) => (
+              {skills.length ? skills.map((skill) => (
                 <div key={`progress-${skill.name}`} className="rounded-lg bg-muted/40 p-3">
                   <div className="mb-1 flex items-center justify-between text-xs">
                     <span>{skill.name}</span>
                     <span className="text-muted-foreground">{skill.level}%</span>
                   </div>
                   <Progress value={skill.level} className="bg-muted" indicatorClassName={skillTone(skill.level)} />
-                  <div className="mt-2">
-                    <Select
-                      value={String(skill.level)}
-                      onValueChange={(next) => {
-                        const parsed = Math.max(0, Math.min(100, Number(next) || 0));
-                        setEditableSkills((prev) => prev.map((item) => (
-                          item.name === skill.name ? { ...item, level: parsed } : item
-                        )));
-                      }}
-                    >
-                      <SelectTrigger className="h-7 border-0 bg-muted/70 ring-0 focus-visible:ring-0" size="sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="20">20%</SelectItem>
-                        <SelectItem value="40">40%</SelectItem>
-                        <SelectItem value="60">60%</SelectItem>
-                        <SelectItem value="80">80%</SelectItem>
-                        <SelectItem value="100">100%</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
               )) : null}
             </div>
@@ -195,31 +136,10 @@ export function SkillsLanguagesPanel({ skills, languages }: Props) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {editableLanguages.map((item) => (
+                {languages.map((item) => (
                   <TableRow key={item.code} className="hover:bg-muted/30">
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>
-                      <Select
-                        value={item.level}
-                        onValueChange={(next) => {
-                          setEditableLanguages((prev) => prev.map((lang) => (
-                            lang.code === item.code ? { ...lang, level: next as LanguageItem["level"] } : lang
-                          )));
-                        }}
-                      >
-                        <SelectTrigger className="h-8 border-0 bg-muted/60 ring-0 focus-visible:ring-0" size="sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A1">A1</SelectItem>
-                          <SelectItem value="A2">A2</SelectItem>
-                          <SelectItem value="B1">B1</SelectItem>
-                          <SelectItem value="B2">B2</SelectItem>
-                          <SelectItem value="C1">C1</SelectItem>
-                          <SelectItem value="C2">C2</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
+                    <TableCell>{item.level}</TableCell>
                     <TableCell><Badge className={languageTone(item.level)}>{item.certification}</Badge></TableCell>
                     <TableCell>
                       <div className="min-w-36">
@@ -232,11 +152,6 @@ export function SkillsLanguagesPanel({ skills, languages }: Props) {
             </Table>
           </TabsContent>
         </Tabs>
-        <div className="mt-4 flex justify-end">
-          <Button type="button" onClick={saveCompetencies} disabled={!hasChanges || isSaving}>
-            {isSaving ? "Guardando..." : "Guardar skills e idiomas"}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
