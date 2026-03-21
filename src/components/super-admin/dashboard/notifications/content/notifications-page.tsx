@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 
-import { Bell, CheckCheck, CheckSquare, ChevronLeft, ChevronRight, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
+import { Bell, CheckCheck, CheckSquare, ChevronLeft, ChevronRight, RefreshCw, ShieldAlert, Trash, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -16,6 +16,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type NotificationItem = {
   id: number;
@@ -46,6 +48,7 @@ export function NotificationsPage() {
   const [total, setTotal] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPending, startTransition] = useTransition();
+  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
 
   const load = useCallback((requestedPage = page, requestedFilter = filter) => {
     startTransition(async () => {
@@ -126,6 +129,7 @@ export function NotificationsPage() {
       }
       toast.success(`${result.count} notificaciones eliminadas del filtro actual`);
       load(1, filter);
+      setConfirmDeleteAllOpen(false);
     });
   };
 
@@ -163,9 +167,6 @@ export function NotificationsPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl bg-card/90 p-3 shadow-sm ring-1 ring-border/40">
-        <Button type="button" variant="outline" size="sm" disabled={isPending} onClick={() => load(page, filter)}>
-          <RefreshCw className="size-4" />Refresh
-        </Button>
         <Button type="button" variant={filter === "all" ? "default" : "outline"} size="sm" onClick={() => { setPage(1); setFilter("all"); }}>Todo</Button>
         <Button type="button" variant={filter === "security" ? "default" : "outline"} size="sm" onClick={() => { setPage(1); setFilter("security"); }}><ShieldAlert className="size-4" />Seguridad</Button>
         <Button type="button" variant={filter === "system" ? "default" : "outline"} size="sm" onClick={() => { setPage(1); setFilter("system"); }}>Sistema</Button>
@@ -179,20 +180,37 @@ export function NotificationsPage() {
             <Checkbox checked={allVisibleSelected} onCheckedChange={(checked) => toggleSelectAllVisible(Boolean(checked))} />
             <span className="inline-flex items-center gap-1"><CheckSquare className="size-4" />Seleccionar todo (visible)</span>
           </label>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" size="sm" disabled={isPending || selectedVisibleCount === 0} onClick={() => setReadState(true)}>
-              <CheckCheck className="size-4" />Marcar leidas
-            </Button>
-            <Button type="button" variant="outline" size="sm" disabled={isPending || selectedVisibleCount === 0} onClick={() => setReadState(false)}>
-              Marcar no leidas
-            </Button>
-            <Button type="button" variant="destructive" size="sm" disabled={isPending || selectedVisibleCount === 0} onClick={dismissSelected}>
-              <Trash2 className="size-4" />Eliminar seleccionadas ({selectedVisibleCount})
-            </Button>
-            <Button type="button" variant="destructive" size="sm" disabled={isPending || total === 0} onClick={dismissAllInFilter}>
-              Eliminar todo del filtro
-            </Button>
-          </div>
+          <TooltipProvider delay={120}>
+            <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background/60 p-1">
+              <Tooltip>
+                <TooltipTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Refrescar" disabled={isPending} onClick={() => load(page, filter)} />}>
+                  <RefreshCw className="size-4" />
+                </TooltipTrigger>
+                <TooltipContent side="top">Refrescar</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Marcar leidas" disabled={isPending || selectedVisibleCount === 0} onClick={() => setReadState(true)} />}>
+                  <CheckCheck className="size-4" />
+                </TooltipTrigger>
+                <TooltipContent side="top">Marcar como leido</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Eliminar seleccionadas" disabled={isPending || selectedVisibleCount === 0} onClick={dismissSelected} />}>
+                  <Trash2 className="size-4" />
+                </TooltipTrigger>
+                <TooltipContent side="top">Eliminar seleccionadas</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Eliminar todo del filtro" disabled={isPending || total === 0} onClick={() => setConfirmDeleteAllOpen(true)} />}>
+                  <Trash className="size-4" />
+                </TooltipTrigger>
+                <TooltipContent side="top">Eliminar todo del filtro</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -228,6 +246,21 @@ export function NotificationsPage() {
           Siguiente<ChevronRight className="size-4" />
         </Button>
       </div>
+
+      <Dialog open={confirmDeleteAllOpen} onOpenChange={setConfirmDeleteAllOpen}>
+        <DialogContent className="max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Eliminar notificaciones del filtro</DialogTitle>
+            <DialogDescription>
+              Esta accion eliminara todas las notificaciones visibles del filtro actual: {filter === "all" ? "Todo" : categoryLabel[filter]}. No se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setConfirmDeleteAllOpen(false)}>Cancelar</Button>
+            <Button type="button" variant="destructive" disabled={isPending || total === 0} onClick={dismissAllInFilter}>Eliminar todo</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

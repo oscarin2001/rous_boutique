@@ -47,11 +47,12 @@ function buildAboutMeText(profile: ProfileForm) {
 
 type Props = {
   profile: ProfileForm;
+  profileSnapshot: ProfileForm;
   profileErrors: ProfileFieldErrors;
+  isPending: boolean;
   isEditingCredentials: boolean;
   isEditable: boolean;
   setIsEditingCredentials: (value: boolean) => void;
-  canSubmitProfile: boolean;
   setProfile: (updater: (prev: ProfileForm) => ProfileForm) => void;
   setProfileErrors: (updater: (prev: ProfileFieldErrors) => ProfileFieldErrors) => void;
   onSave: () => void;
@@ -59,11 +60,12 @@ type Props = {
 
 export function ProfileTab({
   profile,
+  profileSnapshot,
   profileErrors,
+  isPending,
   isEditingCredentials,
   isEditable,
   setIsEditingCredentials,
-  canSubmitProfile,
   setProfile,
   setProfileErrors,
   onSave,
@@ -110,6 +112,25 @@ export function ProfileTab({
 
   const triggerIconClass = (open: boolean) => `size-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`;
 
+  const hasIdentityChanges =
+    profile.firstName !== profileSnapshot.firstName ||
+    profile.lastName !== profileSnapshot.lastName ||
+    profile.birthDate !== profileSnapshot.birthDate ||
+    profile.phone !== profileSnapshot.phone ||
+    profile.ci !== profileSnapshot.ci ||
+    profile.profession !== profileSnapshot.profession ||
+    profile.photoUrl !== profileSnapshot.photoUrl;
+
+  const hasSummaryChanges =
+    profile.aboutMe !== profileSnapshot.aboutMe ||
+    profile.skills !== profileSnapshot.skills ||
+    profile.languages !== profileSnapshot.languages;
+
+  const hasCredentialChanges =
+    profile.username !== profileSnapshot.username ||
+    Boolean(profile.newPassword) ||
+    Boolean(profile.newPasswordConfirm);
+
   return (
     <div className="space-y-4">
       <Collapsible open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
@@ -148,6 +169,11 @@ export function ProfileTab({
             <Label htmlFor="lastLogin">Ultimo acceso</Label>
             <Input id="lastLogin" value={profile.lastLogin ? new Date(profile.lastLogin).toLocaleString("es-BO") : "Sin registro"} disabled readOnly />
           </div>
+          {isEditable ? (
+            <div className="sm:col-span-2 flex justify-end">
+              <Button type="button" disabled={isPending || !hasIdentityChanges} onClick={onSave}>Guardar seccion</Button>
+            </div>
+          ) : null}
         </CollapsibleContent>
       </Collapsible>
 
@@ -160,6 +186,11 @@ export function ProfileTab({
           <div className="sm:col-span-2"><div className="flex items-center justify-between gap-2"><Label htmlFor="aboutMe">Acerca de mi</Label><Button type="button" variant="outline" size="sm" disabled={!isEditable} onClick={handleGenerateAboutMe}>Generar texto profesional</Button></div><Textarea id="aboutMe" disabled={!isEditable} value={profile.aboutMe} placeholder="Ejemplo: Soy un profesional orientado a resultados, enfocado en liderazgo de equipos, optimizacion de procesos y crecimiento sostenible del negocio..." onChange={(e) => { setProfile((v) => ({ ...v, aboutMe: e.target.value.slice(0, 600) })); clear("aboutMe"); }} rows={4} /><p className="mt-1 text-xs text-muted-foreground">Redacta un texto profesional sobre tu perfil, experiencia, enfoque y fortalezas.</p>{profileErrors.aboutMe ? <p className="mt-1 text-xs text-destructive">{profileErrors.aboutMe}</p> : null}</div>
           <div className="sm:col-span-2"><Label htmlFor="skills">Habilidades (max 10, ej: Liderazgo:85, Inventario:78, Ventas:90)</Label><Input id="skills" disabled={!isEditable} value={profile.skills} onChange={(e) => { setProfile((v) => ({ ...v, skills: e.target.value.slice(0, 300) })); clear("skills"); }} />{profileErrors.skills ? <p className="mt-1 text-xs text-destructive">{profileErrors.skills}</p> : null}</div>
           <div className="sm:col-span-2"><Label htmlFor="languages">Idiomas (ej: Espanol:C2:Nativo, Ingles:B2:IELTS)</Label><Input id="languages" disabled={!isEditable} value={profile.languages} onChange={(e) => { setProfile((v) => ({ ...v, languages: e.target.value.slice(0, 500) })); clear("languages"); }} />{profileErrors.languages ? <p className="mt-1 text-xs text-destructive">{profileErrors.languages}</p> : null}</div>
+          {isEditable ? (
+            <div className="sm:col-span-2 flex justify-end">
+              <Button type="button" disabled={isPending || !hasSummaryChanges} onClick={onSave}>Guardar seccion</Button>
+            </div>
+          ) : null}
         </CollapsibleContent>
       </Collapsible>
 
@@ -187,14 +218,13 @@ export function ProfileTab({
               </div>
             </div>
           ) : null}
+          {isEditable ? (
+            <div className="flex justify-end">
+              <Button type="button" disabled={isPending || !hasCredentialChanges} onClick={onSave}>Guardar seccion</Button>
+            </div>
+          ) : null}
         </CollapsibleContent>
       </Collapsible>
-
-      {isEditable ? (
-        <div className="sticky bottom-0 z-10 -mx-5 flex items-center justify-end gap-2 border-t bg-card/95 px-5 py-3 backdrop-blur">
-          <Button type="button" onClick={onSave} disabled={!canSubmitProfile}>Guardar cambios</Button>
-        </div>
-      ) : null}
     </div>
   );
 }

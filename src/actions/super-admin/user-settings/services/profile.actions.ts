@@ -13,6 +13,9 @@ import { ensureSuperAdminSession, getCredentialChangeWindow } from "./common";
 import { updateProfileSchema, type UpdateProfileInput } from "../schemas/profile.schema";
 
 const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+const SKILL_ENTRY_REGEX = /^\s*[^:,]{2,40}\s*:\s*(100|[1-9]?\d)\s*$/;
+const LANGUAGE_ENTRY_REGEX = /^\s*[^:,]{2,40}\s*:\s*(A1|A2|B1|B2|C1|C2)\s*:\s*[^:,]{2,60}\s*$/i;
+const MAX_SKILLS_ENTRIES = 10;
 
 const MIME_TO_EXTENSION: Record<string, string> = {
   "image/jpeg": ".jpg",
@@ -207,6 +210,36 @@ export async function updateSuperAdminProfileAction(input: UpdateProfileInput) {
     select: { id: true, firstName: true, lastName: true, birthDate: true, phone: true, ci: true, profession: true, photoUrl: true, aboutMe: true, skills: true, languages: true, role: { select: { code: true } }, auth: { select: { id: true, username: true, password: true } } },
   });
   if (!existing) return { success: false, error: "Perfil no encontrado" };
+
+  const professionChanged = parsed.data.profession !== (existing.profession ?? "");
+  const aboutMeChanged = parsed.data.aboutMe !== (existing.aboutMe ?? "");
+  const skillsChanged = parsed.data.skills !== (existing.skills ?? "");
+  const languagesChanged = parsed.data.languages !== formatLanguagesForInput(existing.languages);
+
+  if (professionChanged && parsed.data.profession && parsed.data.profession.trim().length < 3) {
+    return { success: false, error: "Profesion demasiado corta" };
+  }
+  if (professionChanged && parsed.data.profession && /\s{2,}/.test(parsed.data.profession.trim())) {
+    return { success: false, error: "Evita espacios dobles en profesion" };
+  }
+  if (aboutMeChanged && parsed.data.aboutMe && parsed.data.aboutMe.trim().length < 30) {
+    return { success: false, error: "Acerca de mi debe tener al menos 30 caracteres" };
+  }
+  if (skillsChanged && parsed.data.skills) {
+    const entries = parsed.data.skills.split(",").map((item) => item.trim()).filter(Boolean);
+    if (entries.length > MAX_SKILLS_ENTRIES) {
+      return { success: false, error: `Puedes registrar maximo ${MAX_SKILLS_ENTRIES} habilidades` };
+    }
+    if (entries.some((entry) => !SKILL_ENTRY_REGEX.test(entry))) {
+      return { success: false, error: "Formato de habilidades invalido. Usa Nombre:80, Ventas:95" };
+    }
+  }
+  if (languagesChanged && parsed.data.languages) {
+    const entries = parsed.data.languages.split(",").map((item) => item.trim()).filter(Boolean);
+    if (entries.some((entry) => !LANGUAGE_ENTRY_REGEX.test(entry))) {
+      return { success: false, error: "Formato de idiomas invalido. Usa Espanol:C2:Nativo, Ingles:B2:IELTS" };
+    }
+  }
 
   const usernameChanged = parsed.data.username !== existing.auth.username;
   const passwordChanged = !!parsed.data.newPassword;

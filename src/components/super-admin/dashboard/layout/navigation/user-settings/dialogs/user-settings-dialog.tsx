@@ -108,11 +108,12 @@ export function UserSettingsDialog({ open, onOpenChange, entryPoint = "settings"
             {state.activeTab === "profile" ? (
               <ProfileTab
                 profile={state.profile}
+                profileSnapshot={state.profileSnapshot}
                 profileErrors={state.profileErrors}
+                isPending={state.isPending}
                 isEditingCredentials={state.isEditingCredentials}
                 isEditable={profileEditable}
                 setIsEditingCredentials={state.setIsEditingCredentials}
-                canSubmitProfile={state.canSubmitProfile}
                 setProfile={state.setProfile}
                 setProfileErrors={state.setProfileErrors}
                 onSave={state.saveProfile}

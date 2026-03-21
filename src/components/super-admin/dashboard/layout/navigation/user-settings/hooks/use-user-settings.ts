@@ -88,7 +88,7 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
 
   const saveProfile = () => {
     if (!hasProfileChanges) return toast.info("No hay cambios para guardar");
-    const errors = validateProfile(profile);
+    const errors = validateProfile(profile, profileSnapshot);
     setProfileErrors(errors);
     if (Object.keys(errors).length) return toast.error("Corrige los datos del perfil");
     requestConfirmation("profile");
@@ -162,6 +162,7 @@ export function useUserSettings(open: boolean, onProfileIdentityChange?: (payloa
 
   return {
     activeTab, setActiveTab, isPending, profile, setProfile, system, setSystem, createAccount, setCreateAccount, sessions, auditFeed,
+    profileSnapshot,
     profileErrors, setProfileErrors, createErrors, setCreateErrors, isEditingCredentials, setIsEditingCredentials, canSubmitProfile,
     saveProfile, saveSystem, createSuperAdmin, revokeOtherSessions,
     closeSessionsPromptOpen, setCloseSessionsPromptOpen, confirmCloseOtherSessions,
