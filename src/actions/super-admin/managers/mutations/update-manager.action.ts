@@ -36,7 +36,7 @@ const MAX_MANAGERS_PER_BRANCH = 2;
 
 export async function updateManager(id: number, data: Record<string, unknown>): Promise<ManagerActionResult> {
   const session = await getSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
 
   const adminConfirmPassword = typeof data.adminConfirmPassword === "string" ? data.adminConfirmPassword : "";
   const validPassword = await verifySessionPassword(session, adminConfirmPassword);
@@ -65,6 +65,8 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
     include: {
       role: { select: { code: true } },
       auth: { select: { id: true, username: true, isActive: true } },
+      employeeProfile: { select: { birthDate: true, homeAddress: true } },
+      employeeEmployment: { select: { salary: true, contributionType: true, hireDate: true } },
       employeeBranches: { select: { branchId: true } },
     },
   });
@@ -125,32 +127,74 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
   }
 
   const updated = await prisma.$transaction(async (tx) => {
-    const { email, password, branchIds, ...employeeData } = payload;
+    const {
+      email,
+      password,
+      branchIds,
+      ...employeeData
+    } = payload;
 
-    const receivesSalary = employeeData.receivesSalary;
-    const salary = employeeData.salary;
+    const safeEmployeeData = Object.fromEntries(
+      Object.entries(employeeData).filter(([key]) => key !== "adminConfirmPassword" && key !== "passwordConfirm")
+    ) as Omit<typeof employeeData, "adminConfirmPassword" | "passwordConfirm">;
+
+    const {
+      receivesSalary,
+      salary,
+      homeAddress,
+      birthDate,
+      hireDate,
+      ...coreEmployeeData
+    } = safeEmployeeData;
 
     await tx.employee.update({
       where: { id },
       data: {
-        ...employeeData,
-        contributionType:
-          receivesSalary === undefined
-            ? undefined
-            : receivesSalary
-              ? "PAID"
-              : "NONE",
-        salary:
-          receivesSalary === undefined
-            ? salary
-            : receivesSalary
-              ? salary
-              : 0,
-        phone: employeeData.phone === "" ? null : employeeData.phone,
-        homeAddress: employeeData.homeAddress === "" ? null : employeeData.homeAddress,
+        ...coreEmployeeData,
+        phone: coreEmployeeData.phone === "" ? null : coreEmployeeData.phone,
         updatedById: session.employeeId,
       },
     });
+
+    if (homeAddress !== undefined || birthDate !== undefined) {
+      await tx.employeeProfile.upsert({
+        where: { employeeId: id },
+        update: {
+          ...(homeAddress !== undefined ? { homeAddress: homeAddress === "" ? null : homeAddress } : {}),
+          ...(birthDate !== undefined ? { birthDate } : {}),
+        },
+        create: {
+          employeeId: id,
+          homeAddress: homeAddress === undefined || homeAddress === "" ? null : homeAddress,
+          birthDate: birthDate ?? null,
+        },
+      });
+    }
+
+    if (receivesSalary !== undefined || salary !== undefined || hireDate !== undefined) {
+      const existingSalary = existing.employeeEmployment?.salary ?? 0;
+      const nextSalary = receivesSalary === false ? 0 : salary ?? existingSalary;
+      const nextContributionType = receivesSalary === undefined
+        ? existing.employeeEmployment?.contributionType ?? "NONE"
+        : receivesSalary
+          ? "PAID"
+          : "NONE";
+
+      await tx.employeeEmployment.upsert({
+        where: { employeeId: id },
+        update: {
+          salary: nextSalary,
+          contributionType: nextContributionType,
+          ...(hireDate !== undefined ? { hireDate } : {}),
+        },
+        create: {
+          employeeId: id,
+          salary: nextSalary,
+          contributionType: nextContributionType,
+          hireDate: hireDate ?? new Date(),
+        },
+      });
+    }
 
     if (email !== undefined) {
       await tx.auth.update({ where: { id: existing.auth.id }, data: { username: email } });
@@ -163,6 +207,7 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
 
     if (branchIds !== undefined) {
       await tx.employeeBranch.deleteMany({ where: { employeeId: id } });
+      await tx.employee.update({ where: { id }, data: { branchId: branchIds[0] ?? null } });
       if (branchIds.length > 0) {
         await tx.employeeBranch.createMany({
           data: branchIds.map((branchId) => ({ employeeId: id, branchId })),
@@ -175,6 +220,8 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
       include: {
         role: { select: { code: true } },
         auth: { select: { username: true, isActive: true } },
+        employeeProfile: { select: { birthDate: true, homeAddress: true } },
+        employeeEmployment: { select: { salary: true, contributionType: true, hireDate: true } },
         createdBy: { select: { firstName: true, lastName: true } },
         updatedBy: { select: { firstName: true, lastName: true } },
         employeeBranches: {
@@ -193,9 +240,9 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
         lastName: existing.lastName,
         ci: existing.ci,
         email: existing.auth.username,
-        birthDate: existing.birthDate?.toISOString() ?? null,
-        receivesSalary: existing.contributionType === "PAID" || Number(existing.salary) > 0,
-        salary: existing.salary,
+        birthDate: existing.employeeProfile?.birthDate?.toISOString() ?? null,
+        receivesSalary: existing.employeeEmployment?.contributionType === "PAID" || Number(existing.employeeEmployment?.salary ?? 0) > 0,
+        salary: existing.employeeEmployment?.salary ?? 0,
         branchIds: existing.employeeBranches.map((item) => item.branchId),
       },
       newValue: {
@@ -203,9 +250,9 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
         lastName: hydrated.lastName,
         ci: hydrated.ci,
         email: hydrated.auth.username,
-        birthDate: hydrated.birthDate?.toISOString() ?? null,
-        receivesSalary: hydrated.contributionType === "PAID" || Number(hydrated.salary) > 0,
-        salary: hydrated.salary,
+        birthDate: hydrated.employeeProfile?.birthDate?.toISOString() ?? null,
+        receivesSalary: hydrated.employeeEmployment?.contributionType === "PAID" || Number(hydrated.employeeEmployment?.salary ?? 0) > 0,
+        salary: hydrated.employeeEmployment?.salary ?? 0,
         branchIds: hydrated.employeeBranches.map((item) => item.branch.id),
       },
     });

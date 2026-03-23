@@ -12,13 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
-import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { HUMAN_NAME_REGEX } from "@/lib/field-validation";
 import { MANAGER_EMAIL_DOMAIN, extractManagerUsername, normalizeManagerUsername } from "@/lib/manager-email";
 
 type FieldErrors = Partial<Record<ManagerFormField, string>>;
 
-const MAX_MANAGERS_PER_BRANCH = 2;
+const MAX_MANAGER_INCOME_BOB = 99999;
+const MAX_HOME_ADDRESS_LENGTH = 120;
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -51,16 +51,8 @@ export function ManagerFormFields({
   onFieldInput,
   isEdit,
 }: Props) {
-  const selectedSet = new Set(selectedBranchIds);
-
-  const toggleBranch = (id: number) => {
-    const next = selectedSet.has(id)
-      ? selectedBranchIds.filter((branchId) => branchId !== id)
-      : [...selectedBranchIds, id];
-
-    onSelectedBranchIdsChange(next);
-    onFieldInput?.("branchIds");
-  };
+  void branchOptions;
+  void onSelectedBranchIdsChange;
 
   return (
     <div className="space-y-4">
@@ -198,7 +190,7 @@ export function ManagerFormFields({
             max="2100-12-31"
             defaultValue={manager?.birthDate?.slice(0, 10) ?? ""}
             required
-            onInput={() => onFieldInput?.("birthDate")}
+            onValueChange={() => onFieldInput?.("birthDate")}
           />
           <FieldError message={errors?.birthDate} />
         </div>
@@ -231,9 +223,16 @@ export function ManagerFormFields({
             inputMode="decimal"
             step="0.01"
             min="0"
+            max={String(MAX_MANAGER_INCOME_BOB)}
             defaultValue={String(manager?.salary ?? 0)}
             disabled={!receivesSalary}
-            onInput={() => onFieldInput?.("salary")}
+            onInput={(event) => {
+              const value = Number(event.currentTarget.value);
+              if (Number.isFinite(value) && value > MAX_MANAGER_INCOME_BOB) {
+                event.currentTarget.value = String(MAX_MANAGER_INCOME_BOB);
+              }
+              onFieldInput?.("salary");
+            }}
           />
           <FieldError message={errors?.salary} />
         </div>
@@ -244,9 +243,9 @@ export function ManagerFormFields({
             id="homeAddress"
             name="homeAddress"
             defaultValue={manager?.homeAddress ?? ""}
-            maxLength={160}
+            maxLength={MAX_HOME_ADDRESS_LENGTH}
             onInput={(event) => {
-              event.currentTarget.value = stripNewLines(event.currentTarget.value).slice(0, 160);
+              event.currentTarget.value = stripNewLines(event.currentTarget.value).slice(0, MAX_HOME_ADDRESS_LENGTH);
               onFieldInput?.("homeAddress");
             }}
           />
@@ -262,61 +261,15 @@ export function ManagerFormFields({
             max="2100-12-31"
             defaultValue={manager?.hireDate.slice(0, 10) ?? ""}
             required
-            onInput={() => onFieldInput?.("hireDate")}
+            onValueChange={() => onFieldInput?.("hireDate")}
           />
           <FieldError message={errors?.hireDate} />
         </div>
       </div>
 
-      <div className="space-y-2 rounded-lg border p-3">
-        <Label className="text-sm">Sucursales asignadas</Label>
-        {branchOptions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay sucursales disponibles.</p>
-        ) : (
-          <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
-            {branchOptions.map((branch) => {
-              const isChecked = selectedSet.has(branch.id);
-              const isSaturated = branch.assignedManagerCount >= MAX_MANAGERS_PER_BRANCH;
-              const isDisabled = isSaturated && !isChecked;
-              const id = `branch-${branch.id}`;
-              return (
-                <div
-                  key={branch.id}
-                  className="flex items-center gap-2 rounded px-1 py-1.5 transition-colors hover:bg-muted/40"
-                >
-                  <Checkbox
-                    id={id}
-                    checked={isChecked}
-                    disabled={isDisabled}
-                    onCheckedChange={() => toggleBranch(branch.id)}
-                  />
-                  <Label
-                    htmlFor={id}
-                    className="flex-1 cursor-pointer text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {branch.name} - {branch.city}
-                    {branch.assignedManagerCount > 0 ? (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        ({branch.assignedManagerCount}/{MAX_MANAGERS_PER_BRANCH} encargado(s))
-                      </span>
-                    ) : null}
-                    {isDisabled ? (
-                      <span className="ml-1 text-xs text-destructive">({ADMIN_VALIDATION_MESSAGES.maxManagersPerBranch})</span>
-                    ) : null}
-                  </Label>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <p className="text-xs text-muted-foreground">
-          {ADMIN_VALIDATION_MESSAGES.maxManagersPerBranch}
-        </p>
-        {selectedBranchIds.map((branchId) => (
-          <input key={branchId} type="hidden" name="branchIds" value={String(branchId)} />
-        ))}
-        <FieldError message={errors?.branchIds} />
-      </div>
+      {selectedBranchIds.map((branchId) => (
+        <input key={branchId} type="hidden" name="branchIds" value={String(branchId)} />
+      ))}
     </div>
   );
 }

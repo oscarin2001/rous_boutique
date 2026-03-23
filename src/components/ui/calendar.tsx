@@ -14,12 +14,6 @@ import {
 } from "react-day-picker";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 
 import { cn } from "@/lib/utils";
 
@@ -27,10 +21,12 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  captionLayout = "label",
+  captionLayout = "dropdown",
   buttonVariant = "ghost",
   formatters,
   components,
+  startMonth,
+  endMonth,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"];
@@ -47,6 +43,8 @@ function Calendar({
         className
       )}
       captionLayout={captionLayout}
+      startMonth={startMonth ?? new Date(1900, 0, 1)}
+      endMonth={endMonth ?? new Date(2100, 11, 1)}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString("default", { month: "short" }),
@@ -139,8 +137,6 @@ function Calendar({
         hidden: cn("invisible", defaultClassNames.hidden),
         ...classNames,
       }}
-      // build custom caption component via any to avoid type issues from react-day-picker types
-      {...(components as any)}
       components={{
         Root: ({ className, rootRef, ...props }) => {
           return (
@@ -152,70 +148,6 @@ function Calendar({
             />
           );
         },
-        Caption: (({ date, onMonthChange }: any) => {
-          const currentYear = date.getFullYear();
-          const months = Array.from({ length: 12 }, (_, i) => ({
-            index: i,
-            label: new Date(2000, i, 1).toLocaleString("default", {
-              month: "short",
-            }),
-          }));
-
-          const startYear = currentYear - 50;
-          const endYear = currentYear + 1;
-          const years = [] as number[];
-          for (let y = startYear; y <= endYear; y++) years.push(y);
-
-          return (
-            <div className="flex items-center justify-center gap-2 px-2 py-1">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button className="rounded-md border px-3 py-1 text-sm">
-                      {date.toLocaleString("default", { month: "short" })}
-                    </button>
-                  }
-                />
-                <DropdownMenuContent>
-                  {months.map((m) => (
-                    <DropdownMenuItem
-                      key={m.index}
-                      onSelect={() =>
-                        onMonthChange?.(
-                          new Date(date.getFullYear(), m.index, 1)
-                        )
-                      }
-                    >
-                      {m.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button className="rounded-md border px-3 py-1 text-sm">
-                      {currentYear}
-                    </button>
-                  }
-                />
-                <DropdownMenuContent>
-                  {years.map((y) => (
-                    <DropdownMenuItem
-                      key={y}
-                      onSelect={() =>
-                        onMonthChange?.(new Date(y, date.getMonth(), 1))
-                      }
-                    >
-                      {y}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          );
-        }) as any,
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
             return (
