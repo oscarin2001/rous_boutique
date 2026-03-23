@@ -16,6 +16,7 @@ import type {
   ManagerActionResult,
   ManagerAuditEntry,
   ManagerBranchOption,
+  ManagerHistoryPage,
   ManagerMetrics,
   ManagerRow,
 } from "@/actions/super-admin/managers/types";
@@ -34,6 +35,8 @@ interface Props {
   branchOptions: ManagerBranchOption[];
 }
 
+const HISTORY_PAGE_SIZE = 15;
+
 export function ManagersPageContent({ initialManagers, branchOptions: initialBranchOptions }: Props) {
   const [managers, setManagers] = useState(initialManagers);
   const [branchOptions, setBranchOptions] = useState(initialBranchOptions);
@@ -45,6 +48,12 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
   const [manageOpen, setManageOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [historyNextCursor, setHistoryNextCursor] = useState<number | null>(null);
+  const [historyChangedFrom, setHistoryChangedFrom] = useState("");
+  const [historyChangedTo, setHistoryChangedTo] = useState("");
+  const [historyLatestDays, setHistoryLatestDays] = useState<number | null>(30);
   const [historyEntries, setHistoryEntries] = useState<ManagerAuditEntry[]>([]);
   const [selected, setSelected] = useState<ManagerRow | null>(null);
 
@@ -146,14 +155,78 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
     });
   };
 
+  const loadManagerHistory = async (managerId: number, reset: boolean, latestDaysOverride?: number | null) => {
+    const page: ManagerHistoryPage = await getManagerHistory(managerId, {
+      cursor: reset ? null : historyNextCursor,
+      limit: HISTORY_PAGE_SIZE,
+      changedFrom: historyChangedFrom || null,
+      changedTo: historyChangedTo || null,
+      latestDays: latestDaysOverride !== undefined ? latestDaysOverride : historyLatestDays,
+    });
+
+    setHistoryEntries((prev) => (reset ? page.entries : [...prev, ...page.entries]));
+    setHistoryHasMore(page.hasMore);
+    setHistoryNextCursor(page.nextCursor);
+  };
+
   const handleOpenHistory = (manager: ManagerRow) => {
     setSelected(manager);
     setHistoryOpen(true);
     setHistoryLoading(true);
+    setHistoryLoadingMore(false);
+    setHistoryHasMore(false);
+    setHistoryNextCursor(null);
+    setHistoryEntries([]);
 
     startTransition(async () => {
-      const entries = await getManagerHistory(manager.id);
-      setHistoryEntries(entries);
+      await loadManagerHistory(manager.id, true);
+      setHistoryLoading(false);
+    });
+  };
+
+  const handleLoadMoreHistory = () => {
+    if (!selected || !historyNextCursor || historyLoadingMore) return;
+
+    setHistoryLoadingMore(true);
+
+    startTransition(async () => {
+      const page: ManagerHistoryPage = await getManagerHistory(selected.id, {
+        cursor: historyNextCursor,
+        limit: HISTORY_PAGE_SIZE,
+        changedFrom: historyChangedFrom || null,
+        changedTo: historyChangedTo || null,
+        latestDays: historyLatestDays,
+      });
+
+      setHistoryEntries((prev) => [...prev, ...page.entries]);
+      setHistoryHasMore(page.hasMore);
+      setHistoryNextCursor(page.nextCursor);
+      setHistoryLoadingMore(false);
+    });
+  };
+
+  const handleApplyLatestHistory = (days: number | null) => {
+    if (!selected) return;
+    setHistoryLatestDays(days);
+    setHistoryLoading(true);
+    startTransition(async () => {
+      setHistoryEntries([]);
+      setHistoryHasMore(false);
+      setHistoryNextCursor(null);
+      await loadManagerHistory(selected.id, true, days);
+      setHistoryLoading(false);
+    });
+  };
+
+  const handleApplyHistoryDateRange = () => {
+    if (!selected) return;
+    setHistoryLatestDays(null);
+    setHistoryLoading(true);
+    startTransition(async () => {
+      setHistoryEntries([]);
+      setHistoryHasMore(false);
+      setHistoryNextCursor(null);
+      await loadManagerHistory(selected.id, true, null);
       setHistoryLoading(false);
     });
   };
@@ -250,10 +323,24 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
             setSelected(null);
             setHistoryEntries([]);
             setHistoryLoading(false);
+            setHistoryLoadingMore(false);
+            setHistoryHasMore(false);
+            setHistoryNextCursor(null);
           }
         }}
         entries={historyEntries}
         isLoading={historyLoading}
+        hasMore={historyHasMore}
+        isLoadingMore={historyLoadingMore}
+        onLoadMore={handleLoadMoreHistory}
+        changedFrom={historyChangedFrom}
+        changedTo={historyChangedTo}
+        latestDays={historyLatestDays}
+        onChangedFromChange={setHistoryChangedFrom}
+        onChangedToChange={setHistoryChangedTo}
+        onLatestDaysChange={setHistoryLatestDays}
+        onApplyDateRange={handleApplyHistoryDateRange}
+        onApplyLatest={handleApplyLatestHistory}
       />
 
       <ManagerDeleteDialog

@@ -1,6 +1,8 @@
 "use client";
 
-import { Mail, Phone, IdCard, Calendar, Wallet, MapPin, Eye, UserRoundCog, BadgeCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { Mail, Phone, IdCard, Calendar, Wallet, MapPin, Eye, UserRoundCog, BadgeCheck, ChevronDown, ChevronUp } from "lucide-react";
 
 import type { ManagerRow } from "@/actions/super-admin/managers/types";
 
@@ -41,6 +43,12 @@ function fmtMoney(value: number) {
 }
 
 export function ManagerDetailsDialog({ manager, open, onOpenChange }: Props) {
+  const [showFullAddress, setShowFullAddress] = useState(false);
+
+  useEffect(() => {
+    if (!open) setShowFullAddress(false);
+  }, [open, manager?.id]);
+
   if (!manager) return null;
   const status = getManagerStatusInfo(manager.status);
 
@@ -60,7 +68,7 @@ export function ManagerDetailsDialog({ manager, open, onOpenChange }: Props) {
             <Row icon={Mail} label="Correo" value={manager.email} />
             <Row icon={Phone} label="Telefono" value={manager.phone ?? "Sin telefono"} />
             <Row icon={Calendar} label="Nacimiento" value={fmtDate(manager.birthDate)} />
-            <Row icon={Calendar} label="Ingreso" value={fmtDate(manager.hireDate)} />
+            <Row icon={Calendar} label="Fecha de ingreso a Rous Boutique" value={fmtDate(manager.hireDate)} />
             <Row icon={BadgeCheck} label="Pago de ingreso registrado" value={manager.receivesSalary ? "Si" : "No"} />
             <Row icon={Wallet} label="Monto de ingreso (BOL)" value={fmtMoney(manager.salary)} />
             <div className="flex items-start gap-2">
@@ -74,9 +82,35 @@ export function ManagerDetailsDialog({ manager, open, onOpenChange }: Props) {
 
           <Separator />
 
-          <section className="space-y-2">
+          <section className="max-w-full space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Direccion</h4>
-            <p className="text-sm font-medium">{manager.homeAddress || "Sin direccion registrada"}</p>
+            {manager.homeAddress ? (
+              <div className="max-w-full space-y-2 overflow-hidden">
+                <p className={`max-w-full text-sm font-medium break-words [overflow-wrap:anywhere] ${!showFullAddress ? "line-clamp-2" : ""}`}>
+                  {manager.homeAddress}
+                </p>
+                {manager.homeAddress.length > 100 && (
+                  <button
+                    onClick={() => setShowFullAddress(!showFullAddress)}
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    {showFullAddress ? (
+                      <>
+                        <ChevronUp className="size-3" />
+                        Ver menos
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="size-3" />
+                        Ver más
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm font-medium">Sin direccion registrada</p>
+            )}
           </section>
 
           <Separator />
