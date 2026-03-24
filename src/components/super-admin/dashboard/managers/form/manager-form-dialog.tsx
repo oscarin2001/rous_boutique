@@ -51,6 +51,8 @@ type ManagerDraft = {
 type ChangeItem = { label: string; from: string; to: string };
 
 const MAX_MANAGERS_PER_BRANCH = 2;
+const MAX_MANAGER_INCOME_BOB = 99999;
+const MAX_HOME_ADDRESS_LENGTH = 120;
 
 interface Props {
   open: boolean;
@@ -250,10 +252,6 @@ export function ManagerFormDialog({
   const validate = (data: ManagerDraft): FieldErrors => {
     const next: FieldErrors = {};
 
-    if (!isEdit && data.branchIds.length === 0) {
-      next.branchIds = ADMIN_VALIDATION_MESSAGES.branchRequired;
-    }
-
     if (data.firstName.length < 2) next.firstName = "Minimo 2 caracteres";
     if (data.firstName.length > 20) next.firstName = "Maximo 20 caracteres";
     if (data.firstName && !HUMAN_NAME_REGEX.test(data.firstName)) next.firstName = "Solo letras y separadores simples";
@@ -298,13 +296,14 @@ export function ManagerFormDialog({
       const salary = Number(data.salary);
       if (!Number.isFinite(salary)) next.salary = "Monto de ingreso invalido";
       if (Number.isFinite(salary) && salary < 0) next.salary = "No puede ser negativo";
+      if (Number.isFinite(salary) && salary > MAX_MANAGER_INCOME_BOB) next.salary = `No puede exceder Bs ${MAX_MANAGER_INCOME_BOB}`;
       if (!data.receivesSalary && salary > 0) next.salary = "Si no registra pago, el monto debe ser 0";
       if (data.receivesSalary && salary <= 0) next.salary = "Si registra pago, el monto debe ser mayor a 0";
     } else if (data.receivesSalary) {
       next.salary = "Si registra pago, el monto debe ser mayor a 0";
     }
 
-    if (data.homeAddress.length > 160) next.homeAddress = "Maximo 160 caracteres";
+    if (data.homeAddress.length > MAX_HOME_ADDRESS_LENGTH) next.homeAddress = `Maximo ${MAX_HOME_ADDRESS_LENGTH} caracteres`;
 
     if (!data.birthDate) next.birthDate = "Fecha de nacimiento obligatoria";
     if (data.birthDate && !isValidIsoDate(data.birthDate)) next.birthDate = "Fecha invalida";
@@ -314,6 +313,15 @@ export function ManagerFormDialog({
 
     if (!data.hireDate) next.hireDate = "Fecha de ingreso obligatoria";
     if (data.hireDate && !isValidIsoDate(data.hireDate)) next.hireDate = "Fecha invalida";
+    if (
+      data.birthDate &&
+      data.hireDate &&
+      isValidIsoDate(data.birthDate) &&
+      isValidIsoDate(data.hireDate) &&
+      data.hireDate < data.birthDate
+    ) {
+      next.hireDate = "La fecha de ingreso no puede ser anterior a la fecha de nacimiento";
+    }
 
     const currentBranchIds = new Set(manager?.branches.map((branch) => branch.id) ?? []);
     const overCapacitySelected = data.branchIds.some((branchId) => {
@@ -335,6 +343,9 @@ export function ManagerFormDialog({
     const formData = new FormData(event.currentTarget);
     formData.set("receivesSalary", String(receivesSalary));
     const nextDraft = buildDraft(formData);
+    if (isEdit && manager && nextDraft.branchIds.length === 0) {
+      nextDraft.branchIds = manager.branches.map((branch) => branch.id);
+    }
     const nextErrors = validate(nextDraft);
     setErrors(nextErrors);
 
@@ -407,13 +418,13 @@ export function ManagerFormDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEdit ? <SquarePen className="size-5 text-primary" /> : <PlusCircle className="size-5 text-primary" />}
-            {isEdit ? "Editar Encargado de sucursal" : "Nuevo Encargado de sucursal"}
+            {isEdit ? `Editar Encargado: ${manager?.fullName ?? ""}` : "Nuevo Encargado de sucursal"}
           </DialogTitle>
           <DialogDescription>
             {isEdit
               ? step === 1
-                ? "Actualiza los datos y revisa los cambios antes de confirmar."
-                : "Confirma los cambios y valida con contrasena."
+                ? `Encargado seleccionado: ${manager?.fullName ?? "No disponible"}. Actualiza los datos y revisa los cambios antes de confirmar.`
+                : `Confirma los cambios para ${manager?.fullName ?? "este encargado"} y valida con contrasena.`
               : "Completa los datos para crear un nuevo encargado."}
           </DialogDescription>
         </DialogHeader>
@@ -470,12 +481,12 @@ export function ManagerFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="manager-edit-confirm-name">Escribe el nombre del encargado para confirmar</Label>
+              <Label htmlFor="manager-edit-confirm-name">Escribe exactamente: {manager?.fullName ?? "-"}</Label>
               <Input
                 id="manager-edit-confirm-name"
                 value={confirmName}
                 onChange={(event) => setConfirmName(event.target.value)}
-               
+                placeholder={manager?.fullName ?? ""}
               />
             </div>
 

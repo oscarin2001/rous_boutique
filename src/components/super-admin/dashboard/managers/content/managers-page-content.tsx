@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ import { ManagerAssignmentsDialog } from "../dialogs/manager-assignments-dialog"
 import { ManagerDeleteDialog } from "../dialogs/manager-delete-dialog";
 import { ManagerDetailsDialog } from "../dialogs/manager-details-dialog";
 import { ManagerHistoryDialog } from "../dialogs/manager-history-dialog";
+import { ManagerStatusDialog } from "../dialogs/manager-status-dialog";
 import { ManagersFilters } from "../filters/managers-filters";
 import { ManagerFormDialog } from "../form/manager-form-dialog";
 import { ManagersMetrics } from "../metrics/managers-metrics";
@@ -46,6 +47,7 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
@@ -144,16 +146,45 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
   };
 
   const handleToggleStatus = (manager: ManagerRow) => {
-    startTransition(async () => {
-      const result = await toggleManagerStatus(manager.id);
-      if (result.success && result.manager) {
-        setManagers((prev) => prev.map((item) => (item.id === result.manager!.id ? result.manager! : item)));
-        toast.success(result.manager.status === "ACTIVE" ? "Encargado activado" : "Encargado desactivado");
-      } else {
-        toast.error(result.error ?? "No se pudo actualizar el estado");
-      }
-    });
+    setSelected(manager);
+    setStatusOpen(true);
   };
+
+  const handleConfirmToggleStatus = (
+    confirmPassword: string,
+    confirmName: string,
+    reason: string
+  ): Promise<string | null> =>
+    new Promise((resolve) => {
+      if (!selected) {
+        resolve("Encargado no encontrado");
+        return;
+      }
+
+      if (confirmName.trim().toLowerCase() !== selected.fullName.trim().toLowerCase()) {
+        resolve("Debes escribir exactamente el nombre del encargado.");
+        return;
+      }
+
+      startTransition(async () => {
+        const result = await toggleManagerStatus(
+          selected.id,
+          confirmPassword,
+          selected.status,
+          reason
+        );
+        if (result.success && result.manager) {
+          setManagers((prev) => prev.map((item) => (item.id === result.manager!.id ? result.manager! : item)));
+          toast.success(result.manager.status === "ACTIVE" ? "Encargado activado" : "Encargado desactivado");
+          setStatusOpen(false);
+          setSelected(null);
+          resolve(null);
+          return;
+        }
+
+        resolve(result.fieldErrors?.adminConfirmPassword ?? result.error ?? "No se pudo actualizar el estado");
+      });
+    });
 
   const loadManagerHistory = async (managerId: number, reset: boolean, latestDaysOverride?: number | null) => {
     const page: ManagerHistoryPage = await getManagerHistory(managerId, {
@@ -169,7 +200,7 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
     setHistoryNextCursor(page.nextCursor);
   };
 
-  const handleOpenHistory = (manager: ManagerRow) => {
+  const handleOpenHistory = useCallback((manager: ManagerRow) => {
     setSelected(manager);
     setHistoryOpen(true);
     setHistoryLoading(true);
@@ -182,9 +213,9 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
       await loadManagerHistory(manager.id, true);
       setHistoryLoading(false);
     });
-  };
+  }, []);
 
-  const handleLoadMoreHistory = () => {
+  const handleLoadMoreHistory = useCallback(() => {
     if (!selected || !historyNextCursor || historyLoadingMore) return;
 
     setHistoryLoadingMore(true);
@@ -203,9 +234,9 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
       setHistoryNextCursor(page.nextCursor);
       setHistoryLoadingMore(false);
     });
-  };
+  }, [selected?.id, historyNextCursor, historyLoadingMore, historyChangedFrom, historyChangedTo, historyLatestDays]);
 
-  const handleApplyLatestHistory = (days: number | null) => {
+  const handleApplyLatestHistory = useCallback((days: number | null) => {
     if (!selected) return;
     setHistoryLatestDays(days);
     setHistoryLoading(true);
@@ -216,9 +247,9 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
       await loadManagerHistory(selected.id, true, days);
       setHistoryLoading(false);
     });
-  };
+  }, [selected?.id]);
 
-  const handleApplyHistoryDateRange = () => {
+  const handleApplyHistoryDateRange = useCallback(() => {
     if (!selected) return;
     setHistoryLatestDays(null);
     setHistoryLoading(true);
@@ -229,7 +260,19 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
       await loadManagerHistory(selected.id, true, null);
       setHistoryLoading(false);
     });
-  };
+  }, [selected?.id]);
+
+  const handleHistoryChangedFromChange = useCallback((value: string) => {
+    setHistoryChangedFrom(value);
+  }, []);
+
+  const handleHistoryChangedToChange = useCallback((value: string) => {
+    setHistoryChangedTo(value);
+  }, []);
+
+  const handleHistoryLatestDaysChange = useCallback((value: number | null) => {
+    setHistoryLatestDays(value);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -336,11 +379,22 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
         changedFrom={historyChangedFrom}
         changedTo={historyChangedTo}
         latestDays={historyLatestDays}
-        onChangedFromChange={setHistoryChangedFrom}
-        onChangedToChange={setHistoryChangedTo}
-        onLatestDaysChange={setHistoryLatestDays}
+        onChangedFromChange={handleHistoryChangedFromChange}
+        onChangedToChange={handleHistoryChangedToChange}
+        onLatestDaysChange={handleHistoryLatestDaysChange}
         onApplyDateRange={handleApplyHistoryDateRange}
         onApplyLatest={handleApplyLatestHistory}
+      />
+
+      <ManagerStatusDialog
+        manager={selected}
+        open={statusOpen}
+        onOpenChange={(value) => {
+          setStatusOpen(value);
+          if (!value) setSelected(null);
+        }}
+        onConfirm={handleConfirmToggleStatus}
+        isPending={isPending}
       />
 
       <ManagerDeleteDialog

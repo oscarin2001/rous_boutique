@@ -62,7 +62,8 @@ export type ManagerFormField =
   | "birthDate"
   | "hireDate"
   | "branchIds"
-  | "adminConfirmPassword";
+  | "adminConfirmPassword"
+  | "statusReason";
 
 export interface ManagerActionResult {
   success: boolean;
@@ -78,4 +79,10 @@ export interface ManagerAuditEntry {
   employeeName: string | null;
   oldValue: string | null;
   newValue: string | null;
+}
+
+export interface ManagerHistoryPage {
+  entries: ManagerAuditEntry[];
+  nextCursor: number | null;
+  hasMore: boolean;
 }

@@ -1,9 +1,11 @@
 import { z } from "zod";
 
-import { ADMIN_VALIDATION_MESSAGES } from "@/lib/admin-validation-messages";
 import { BOLIVIA_PHONE_REGEX } from "@/lib/bolivia";
 import { HUMAN_NAME_REGEX, parseIsoDate } from "@/lib/field-validation";
 import { isManagerEmail } from "@/lib/manager-email";
+
+const MAX_MANAGER_INCOME_BOB = 99999;
+const MAX_HOME_ADDRESS_LENGTH = 120;
 
 const dateField = z
   .string()
@@ -83,12 +85,12 @@ const managerBaseSchema = z.object({
       if (value === "" || value === null || value === undefined) return 0;
       if (typeof value === "string") return Number(value);
       return value;
-    }, z.number().min(0, "El monto de ingreso no puede ser negativo"))
+    }, z.number().min(0, "El monto de ingreso no puede ser negativo").max(MAX_MANAGER_INCOME_BOB, `El monto de ingreso no puede exceder Bs ${MAX_MANAGER_INCOME_BOB}`))
     .optional(),
   homeAddress: z
     .string()
     .trim()
-    .max(160, "La direccion no puede exceder 160 caracteres")
+    .max(MAX_HOME_ADDRESS_LENGTH, `La direccion no puede exceder ${MAX_HOME_ADDRESS_LENGTH} caracteres`)
     .optional()
     .or(z.literal("")),
   hireDate: dateField,
@@ -97,14 +99,6 @@ const managerBaseSchema = z.object({
 });
 
 export const createManagerSchema = managerBaseSchema.superRefine((data, ctx) => {
-  if (!data.branchIds.length) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["branchIds"],
-      message: ADMIN_VALIDATION_MESSAGES.branchRequired,
-    });
-  }
-
   if (data.password !== data.passwordConfirm) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -135,6 +129,14 @@ export const createManagerSchema = managerBaseSchema.superRefine((data, ctx) => 
       code: z.ZodIssueCode.custom,
       path: ["birthDate"],
       message: "El encargado debe tener al menos 18 anos",
+    });
+  }
+
+  if (data.hireDate < data.birthDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["hireDate"],
+      message: "La fecha de ingreso no puede ser anterior a la fecha de nacimiento",
     });
   }
 });
@@ -206,6 +208,14 @@ export const updateManagerSchema = managerBaseSchema
         code: z.ZodIssueCode.custom,
         path: ["birthDate"],
         message: "El encargado debe tener al menos 18 anos",
+      });
+    }
+
+    if (data.birthDate !== undefined && data.hireDate !== undefined && data.hireDate < data.birthDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["hireDate"],
+        message: "La fecha de ingreso no puede ser anterior a la fecha de nacimiento",
       });
     }
   });

@@ -12,7 +12,10 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
 import { createManagerAuditLog } from "../helpers/audit";
-import { verifySessionPassword } from "../helpers/security";
+import {
+  enforceAdminPasswordCheck,
+  enforceSensitiveActionRateLimit,
+} from "../helpers/security-hardening";
 import { serializeManager } from "../helpers/shared";
 
 const MANAGER_FORM_FIELDS = new Set<ManagerFormField>([
@@ -38,13 +41,18 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
   const session = await getSession();
   if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
 
+  const rateLimitError = enforceSensitiveActionRateLimit(session);
+  if (rateLimitError) {
+    return { success: false, error: rateLimitError };
+  }
+
   const adminConfirmPassword = typeof data.adminConfirmPassword === "string" ? data.adminConfirmPassword : "";
-  const validPassword = await verifySessionPassword(session, adminConfirmPassword);
-  if (!validPassword) {
+  const passwordError = await enforceAdminPasswordCheck(session, adminConfirmPassword, true);
+  if (passwordError) {
     return {
       success: false,
-      error: "Contraseña de confirmación inválida",
-      fieldErrors: { adminConfirmPassword: "Contraseña inválida" },
+      error: passwordError,
+      fieldErrors: { adminConfirmPassword: passwordError },
     };
   }
 
@@ -76,6 +84,16 @@ export async function updateManager(id: number, data: Record<string, unknown>): 
   }
 
   const payload = parsed.data;
+
+  const effectiveBirthDate = payload.birthDate ?? existing.employeeProfile?.birthDate ?? null;
+  const effectiveHireDate = payload.hireDate ?? existing.employeeEmployment?.hireDate ?? null;
+  if (effectiveBirthDate && effectiveHireDate && effectiveHireDate < effectiveBirthDate) {
+    return {
+      success: false,
+      error: "La fecha de ingreso no puede ser anterior a la fecha de nacimiento",
+      fieldErrors: { hireDate: "La fecha de ingreso no puede ser anterior a la fecha de nacimiento" },
+    };
+  }
 
   if (payload.email && payload.email !== existing.auth.username) {
     const emailExists = await prisma.auth.findUnique({ where: { username: payload.email } });

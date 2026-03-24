@@ -8,15 +8,27 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
 import { createManagerAuditLog } from "../helpers/audit";
-import { verifySessionPassword } from "../helpers/security";
+import {
+  enforceAdminPasswordCheck,
+  enforceSensitiveActionRateLimit,
+} from "../helpers/security-hardening";
 
 export async function deleteManager(id: number, confirmPassword: string): Promise<ManagerActionResult> {
   const session = await getSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
 
-  const validPassword = await verifySessionPassword(session, confirmPassword);
-  if (!validPassword) {
-    return { success: false, error: "Contraseña de confirmación inválida" };
+  const rateLimitError = enforceSensitiveActionRateLimit(session);
+  if (rateLimitError) {
+    return { success: false, error: rateLimitError };
+  }
+
+  const passwordError = await enforceAdminPasswordCheck(session, confirmPassword, true);
+  if (passwordError) {
+    return {
+      success: false,
+      error: passwordError,
+      fieldErrors: { adminConfirmPassword: passwordError },
+    };
   }
 
   const existing = await prisma.employee.findUnique({

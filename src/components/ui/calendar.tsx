@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { es } from "date-fns/locale";
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -11,6 +12,7 @@ import {
   DayPicker,
   getDefaultClassNames,
   type DayButtonProps,
+  type DropdownProps,
 } from "react-day-picker";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -33,6 +35,15 @@ function Calendar({
 }) {
   const defaultClassNames = getDefaultClassNames();
 
+  const defaultStartMonth = React.useMemo(() => new Date(1900, 0, 1), []);
+  const defaultEndMonth = React.useMemo(() => new Date(2100, 11, 1), []);
+
+  const defaultFormatters = React.useMemo(() => ({
+    formatMonthDropdown: (date: Date) =>
+      date.toLocaleString("es-BO", { month: "short" }),
+    ...formatters,
+  }), [formatters]);
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -43,13 +54,10 @@ function Calendar({
         className
       )}
       captionLayout={captionLayout}
-      startMonth={startMonth ?? new Date(1900, 0, 1)}
-      endMonth={endMonth ?? new Date(2100, 11, 1)}
-      formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
-        ...formatters,
-      }}
+      locale={es}
+      startMonth={startMonth ?? defaultStartMonth}
+      endMonth={endMonth ?? defaultEndMonth}
+      formatters={defaultFormatters}
       classNames={{
         root: cn("w-fit", defaultClassNames.root),
         months: cn(
@@ -178,6 +186,7 @@ function Calendar({
             </td>
           );
         },
+        Dropdown: CalendarDropdown,
         ...components,
       }}
       {...props}
@@ -185,6 +194,41 @@ function Calendar({
   );
 }
 
+function CalendarDropdown({
+  options,
+  value,
+  onChange,
+  disabled,
+  "aria-label": ariaLabel,
+  className,
+}: DropdownProps) {
+  const selectedOption = options?.find((option) => option.value === value);
+
+  return (
+    <span
+      data-disabled={disabled}
+      className="relative has-focus:border-ring border border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] rounded-md"
+    >
+      <select
+        className={cn("absolute inset-0 opacity-0", className)}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        aria-label={ariaLabel}
+      >
+        {options?.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <span className="rounded-md pl-2 pr-1 flex items-center gap-1 text-sm h-8 select-none font-medium" aria-hidden>
+        {selectedOption?.label}
+        <ChevronDownIcon className="text-muted-foreground size-3.5" />
+      </span>
+    </span>
+  );
+}
 function CalendarDayButton({
   className,
   day,

@@ -8,11 +8,52 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
 import { createManagerAuditLog } from "../helpers/audit";
+import {
+  enforceAdminPasswordCheck,
+  enforceSensitiveActionRateLimit,
+} from "../helpers/security-hardening";
 import { serializeManager } from "../helpers/shared";
 
-export async function toggleManagerStatus(id: number): Promise<ManagerActionResult> {
+export async function toggleManagerStatus(
+  id: number,
+  adminConfirmPassword: string,
+  expectedCurrentStatus?: "ACTIVE" | "DEACTIVATED" | "INACTIVE",
+  reason?: string
+): Promise<ManagerActionResult> {
   const session = await getSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
+
+  const rateLimitError = enforceSensitiveActionRateLimit(session);
+  if (rateLimitError) {
+    return { success: false, error: rateLimitError };
+  }
+
+  const passwordError = await enforceAdminPasswordCheck(session, adminConfirmPassword, true);
+  if (passwordError) {
+    return {
+      success: false,
+      error: passwordError,
+      fieldErrors: {
+        adminConfirmPassword: passwordError,
+      },
+    };
+  }
+
+  const sanitizedReason = (reason ?? "").trim();
+  if (sanitizedReason.length < 10) {
+    return {
+      success: false,
+      error: "El motivo debe tener al menos 10 caracteres",
+      fieldErrors: { statusReason: "El motivo debe tener al menos 10 caracteres" },
+    };
+  }
+  if (sanitizedReason.length > 160) {
+    return {
+      success: false,
+      error: "El motivo no puede exceder 160 caracteres",
+      fieldErrors: { statusReason: "El motivo no puede exceder 160 caracteres" },
+    };
+  }
 
   const existing = await prisma.employee.findUnique({
     where: { id },
@@ -29,8 +70,16 @@ export async function toggleManagerStatus(id: number): Promise<ManagerActionResu
     return { success: false, error: "Encargado no encontrado" };
   }
 
+  if (existing.id === session.employeeId) {
+    return { success: false, error: "No puedes cambiar tu propio estado" };
+  }
+
   if (existing.status === "INACTIVE") {
     return { success: false, error: "No se puede cambiar el estado de un encargado inactivo" };
+  }
+
+  if (expectedCurrentStatus && existing.status !== expectedCurrentStatus) {
+    return { success: false, error: "El estado ya fue modificado. Recarga e intenta nuevamente" };
   }
 
   const nextStatus = existing.status === "ACTIVE" ? "DEACTIVATED" : "ACTIVE";
@@ -54,7 +103,7 @@ export async function toggleManagerStatus(id: number): Promise<ManagerActionResu
       action: "UPDATE",
       employeeId: session.employeeId,
       oldValue: { status: existing.status },
-      newValue: { status: nextStatus },
+      newValue: { status: nextStatus, statusReason: sanitizedReason },
     });
 
     return tx.employee.findUniqueOrThrow({
@@ -62,6 +111,8 @@ export async function toggleManagerStatus(id: number): Promise<ManagerActionResu
       include: {
         role: { select: { code: true } },
         auth: { select: { username: true, isActive: true } },
+        employeeProfile: { select: { birthDate: true, homeAddress: true } },
+        employeeEmployment: { select: { salary: true, contributionType: true, hireDate: true } },
         createdBy: { select: { firstName: true, lastName: true } },
         updatedBy: { select: { firstName: true, lastName: true } },
         employeeBranches: {
