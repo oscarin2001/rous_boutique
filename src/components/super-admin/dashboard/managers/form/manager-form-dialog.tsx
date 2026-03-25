@@ -75,17 +75,7 @@ function hasMinimumAgeIso(isoDate: string, years: number): boolean {
   return birthDate <= limitDate;
 }
 
-function fmtDateTime(value: string | null): string {
-  if (!value) return "No disponible";
-  return new Intl.DateTimeFormat("es-BO", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
+ 
 function buildDraft(formData: FormData): ManagerDraft {
   const branchIds = formData
     .getAll("branchIds")

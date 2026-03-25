@@ -240,7 +240,7 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
       setHistoryNextCursor(page.nextCursor);
       setHistoryLoadingMore(false);
     });
-  }, [selected?.id, historyNextCursor, historyLoadingMore, historyChangedFrom, historyChangedTo, historyLatestDays]);
+  }, [selected, historyNextCursor, historyLoadingMore, historyChangedFrom, historyChangedTo, historyLatestDays]);
 
   const handleApplyLatestHistory = useCallback(
     (days: number | null) => {
@@ -255,7 +255,7 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
         setHistoryLoading(false);
       });
     },
-    [selected?.id, loadManagerHistory]
+    [selected, loadManagerHistory]
   );
 
   const handleApplyHistoryDateRange = useCallback(
@@ -271,7 +271,7 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
         setHistoryLoading(false);
       });
     },
-    [selected?.id, loadManagerHistory]
+    [selected, loadManagerHistory]
   );
 
   const handleHistoryChangedFromChange = useCallback((value: string) => {

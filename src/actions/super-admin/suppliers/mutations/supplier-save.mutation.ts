@@ -100,7 +100,7 @@ export async function saveSupplierAction(
         }
 
         // Create detailed audit log
-        const changes: Record<string, { old: any; new: any }> = {};
+        const changes: Record<string, { old: unknown; new: unknown }> = {};
 
         const fieldsToCheck = [
           'firstName', 'lastName', 'phone', 'email', 'address', 'city', 'department', 'country', 'ci', 'notes',
