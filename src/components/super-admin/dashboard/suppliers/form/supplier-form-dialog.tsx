@@ -29,17 +29,6 @@ interface Props {
   isPending: boolean;
 }
 
-function fmtDateTime(value: string | null): string {
-  if (!value) return "No disponible";
-  return new Intl.DateTimeFormat("es-BO", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions, managerOptions, onSubmit, isPending }: Props) {
   const isEdit = !!supplier;
   const [errors, setErrors] = useState<FieldErrors>({});

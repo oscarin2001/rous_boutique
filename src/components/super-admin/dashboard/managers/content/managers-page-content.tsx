@@ -186,21 +186,25 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
       });
     });
 
-  const loadManagerHistory = async (managerId: number, reset: boolean, latestDaysOverride?: number | null) => {
-    const page: ManagerHistoryPage = await getManagerHistory(managerId, {
-      cursor: reset ? null : historyNextCursor,
-      limit: HISTORY_PAGE_SIZE,
-      changedFrom: historyChangedFrom || null,
-      changedTo: historyChangedTo || null,
-      latestDays: latestDaysOverride !== undefined ? latestDaysOverride : historyLatestDays,
-    });
+  const loadManagerHistory = useCallback(
+    async (managerId: number, reset: boolean, latestDaysOverride?: number | null) => {
+      const page: ManagerHistoryPage = await getManagerHistory(managerId, {
+        cursor: reset ? null : historyNextCursor,
+        limit: HISTORY_PAGE_SIZE,
+        changedFrom: historyChangedFrom || null,
+        changedTo: historyChangedTo || null,
+        latestDays: latestDaysOverride !== undefined ? latestDaysOverride : historyLatestDays,
+      });
 
-    setHistoryEntries((prev) => (reset ? page.entries : [...prev, ...page.entries]));
-    setHistoryHasMore(page.hasMore);
-    setHistoryNextCursor(page.nextCursor);
-  };
+      setHistoryEntries((prev) => (reset ? page.entries : [...prev, ...page.entries]));
+      setHistoryHasMore(page.hasMore);
+      setHistoryNextCursor(page.nextCursor);
+    },
+    [historyNextCursor, historyChangedFrom, historyChangedTo, historyLatestDays]
+  );
 
-  const handleOpenHistory = useCallback((manager: ManagerRow) => {
+  const handleOpenHistory = useCallback(
+    (manager: ManagerRow) => {
     setSelected(manager);
     setHistoryOpen(true);
     setHistoryLoading(true);
@@ -209,11 +213,13 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
     setHistoryNextCursor(null);
     setHistoryEntries([]);
 
-    startTransition(async () => {
-      await loadManagerHistory(manager.id, true);
-      setHistoryLoading(false);
-    });
-  }, []);
+      startTransition(async () => {
+        await loadManagerHistory(manager.id, true);
+        setHistoryLoading(false);
+      });
+    },
+    [loadManagerHistory]
+  );
 
   const handleLoadMoreHistory = useCallback(() => {
     if (!selected || !historyNextCursor || historyLoadingMore) return;
@@ -236,31 +242,37 @@ export function ManagersPageContent({ initialManagers, branchOptions: initialBra
     });
   }, [selected?.id, historyNextCursor, historyLoadingMore, historyChangedFrom, historyChangedTo, historyLatestDays]);
 
-  const handleApplyLatestHistory = useCallback((days: number | null) => {
-    if (!selected) return;
-    setHistoryLatestDays(days);
-    setHistoryLoading(true);
-    startTransition(async () => {
-      setHistoryEntries([]);
-      setHistoryHasMore(false);
-      setHistoryNextCursor(null);
-      await loadManagerHistory(selected.id, true, days);
-      setHistoryLoading(false);
-    });
-  }, [selected?.id]);
+  const handleApplyLatestHistory = useCallback(
+    (days: number | null) => {
+      if (!selected) return;
+      setHistoryLatestDays(days);
+      setHistoryLoading(true);
+      startTransition(async () => {
+        setHistoryEntries([]);
+        setHistoryHasMore(false);
+        setHistoryNextCursor(null);
+        await loadManagerHistory(selected.id, true, days);
+        setHistoryLoading(false);
+      });
+    },
+    [selected?.id, loadManagerHistory]
+  );
 
-  const handleApplyHistoryDateRange = useCallback(() => {
-    if (!selected) return;
-    setHistoryLatestDays(null);
-    setHistoryLoading(true);
-    startTransition(async () => {
-      setHistoryEntries([]);
-      setHistoryHasMore(false);
-      setHistoryNextCursor(null);
-      await loadManagerHistory(selected.id, true, null);
-      setHistoryLoading(false);
-    });
-  }, [selected?.id]);
+  const handleApplyHistoryDateRange = useCallback(
+    () => {
+      if (!selected) return;
+      setHistoryLatestDays(null);
+      setHistoryLoading(true);
+      startTransition(async () => {
+        setHistoryEntries([]);
+        setHistoryHasMore(false);
+        setHistoryNextCursor(null);
+        await loadManagerHistory(selected.id, true, null);
+        setHistoryLoading(false);
+      });
+    },
+    [selected?.id, loadManagerHistory]
+  );
 
   const handleHistoryChangedFromChange = useCallback((value: string) => {
     setHistoryChangedFrom(value);
