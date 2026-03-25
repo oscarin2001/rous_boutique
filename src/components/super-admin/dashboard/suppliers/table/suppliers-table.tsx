@@ -53,7 +53,7 @@ export function SuppliersTable({
   onViewDetails,
 }: Props) {
   return (
-    <div className="rounded-lg bg-card/70 shadow-sm">
+    <div className="rounded-md border border-border/20 bg-card/60 shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>

@@ -4,6 +4,7 @@ import type { SupplierRow } from "@/actions/super-admin/suppliers/types";
 
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 interface Props {
   supplier: SupplierRow | null;
@@ -23,28 +24,39 @@ export function SupplierDetailsDialog({ supplier, open, onOpenChange }: Props) {
             Detalle de Proveedor
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-2 text-sm">
-          <p><strong>Nombre:</strong> {supplier.fullName}</p>
-          <p><strong>Correo:</strong> {supplier.email || "Sin correo"}</p>
-          <p><strong>Telefono:</strong> {supplier.phone || "Sin telefono"}</p>
-          <p><strong>CI:</strong> {supplier.ci || "Sin CI"}</p>
-          <p><strong>Direccion:</strong> {supplier.address || "Sin direccion"}</p>
-          <p><strong>Ciudad:</strong> {supplier.city || "Sin ciudad"}</p>
-          <p><strong>Departamento:</strong> {supplier.department || "Sin departamento"}</p>
-          <p><strong>Pais:</strong> {supplier.country || "Sin pais"}</p>
-          <p><strong>Aliado desde:</strong> {supplier.partnerSince || "Sin fecha"}</p>
-          <p><strong>Fin contrato:</strong> {supplier.contractEndAt || "Sin fecha"}</p>
-          <p><strong>Contrato indefinido:</strong> {supplier.isIndefinite ? "Si" : "No"}</p>
-
-          <div>
-            <strong>Sucursales:</strong>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {supplier.branches.length
-                ? supplier.branches.map((b) => <Badge key={b.id} variant="outline">{b.name}</Badge>)
-                : <span className="text-muted-foreground">Sin asignacion</span>}
-            </div>
-          </div>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Campo</TableHead>
+              <TableHead>Valor</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[
+              { label: "Nombre", value: supplier.fullName },
+              { label: "Correo", value: supplier.email || "Sin correo" },
+              { label: "Telefono", value: supplier.phone || "Sin telefono" },
+              { label: "CI", value: supplier.ci || "Sin CI" },
+              { label: "Direccion", value: supplier.address || "Sin direccion" },
+              { label: "Ciudad", value: supplier.city || "Sin ciudad" },
+              { label: "Departamento", value: supplier.department || "Sin departamento" },
+              { label: "Pais", value: supplier.country || "Sin pais" },
+              { label: "Aliado desde", value: supplier.partnerSince || "Sin fecha" },
+              { label: "Fin contrato", value: supplier.contractEndAt || "Sin fecha" },
+              { label: "Contrato indefinido", value: supplier.isIndefinite ? "Si" : "No" },
+              { label: "Sucursales", value: supplier.branches.length
+                ? supplier.branches.map((b) => b.name).join(", ")
+                : "Sin asignacion" },
+            ]
+              .sort((a, b) => a.label.localeCompare(b.label, "es"))
+              .map((row) => (
+                <TableRow key={row.label}>
+                  <TableCell className="font-medium text-sm text-muted-foreground">{row.label}</TableCell>
+                  <TableCell className="text-sm">{row.value}</TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
       </DialogContent>
     </Dialog>
   );
