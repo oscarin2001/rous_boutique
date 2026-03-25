@@ -35,6 +35,7 @@ export function SupplierDetailsDialog({ supplier, open, onOpenChange }: Props) {
           <p><strong>Aliado desde:</strong> {supplier.partnerSince || "Sin fecha"}</p>
           <p><strong>Fin contrato:</strong> {supplier.contractEndAt || "Sin fecha"}</p>
           <p><strong>Contrato indefinido:</strong> {supplier.isIndefinite ? "Si" : "No"}</p>
+
           <div>
             <strong>Sucursales:</strong>
             <div className="mt-1 flex flex-wrap gap-1">

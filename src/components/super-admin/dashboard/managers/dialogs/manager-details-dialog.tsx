@@ -1,19 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React from "react";
 
-import { Mail, Phone, IdCard, Calendar, Wallet, MapPin, Eye, UserRoundCog, BadgeCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye } from "lucide-react";
 
 import type { ManagerRow } from "@/actions/super-admin/managers/types";
 
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 
 import { getManagerStatusInfo } from "../utils/manager-status";
@@ -43,11 +37,7 @@ function fmtMoney(value: number) {
 }
 
 export function ManagerDetailsDialog({ manager, open, onOpenChange }: Props) {
-  const [showFullAddress, setShowFullAddress] = useState(false);
-
-  useEffect(() => {
-    if (!open) setShowFullAddress(false);
-  }, [open, manager?.id]);
+  
 
   if (!manager) return null;
   const status = getManagerStatusInfo(manager.status);
@@ -63,107 +53,46 @@ export function ManagerDetailsDialog({ manager, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <section className="grid gap-2 text-sm sm:grid-cols-2">
-            <Row icon={IdCard} label="CI" value={manager.ci} />
-            <Row icon={Mail} label="Correo" value={manager.email} />
-            <Row icon={Phone} label="Telefono" value={manager.phone ?? "Sin telefono"} />
-            <Row icon={Calendar} label="Nacimiento" value={fmtDate(manager.birthDate)} />
-            <Row icon={Calendar} label="Fecha de ingreso a Rous Boutique" value={fmtDate(manager.hireDate)} />
-            <Row icon={BadgeCheck} label="Pago de ingreso registrado" value={manager.receivesSalary ? "Si" : "No"} />
-            <Row icon={Wallet} label="Monto de ingreso (BOL)" value={fmtMoney(manager.salary)} />
-            <div className="flex items-start gap-2">
-              <MapPin className="mt-0.5 size-4 text-muted-foreground" />
-              <div>
-                <span className="text-muted-foreground">Estado: </span>
-                <Badge variant={status.variant}>{status.label}</Badge>
-              </div>
-            </div>
-          </section>
-
-          <Separator />
-
-          <section className="max-w-full space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Direccion</h4>
-            {manager.homeAddress ? (
-              <div className="max-w-full space-y-2 overflow-hidden">
-                <p className={`max-w-full text-sm font-medium break-words [overflow-wrap:anywhere] ${!showFullAddress ? "line-clamp-2" : ""}`}>
-                  {manager.homeAddress}
-                </p>
-                {manager.homeAddress.length > 100 && (
-                  <button
-                    onClick={() => setShowFullAddress(!showFullAddress)}
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    {showFullAddress ? (
-                      <>
-                        <ChevronUp className="size-3" />
-                        Ver menos
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="size-3" />
-                        Ver más
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm font-medium">Sin direccion registrada</p>
-            )}
-          </section>
-
-          <Separator />
-
-          <section className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Sucursales asignadas</h4>
-            {manager.branches.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin sucursales asignadas.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {manager.branches.map((branch) => (
-                  <Badge key={branch.id} variant="secondary">
-                    {branch.name} ({branch.city})
-                  </Badge>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campo</TableHead>
+                <TableHead>Valor</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(
+                [
+                  { label: "CI", value: manager.ci },
+                  { label: "Correo", value: manager.email },
+                  { label: "Telefono", value: manager.phone ?? "Sin telefono" },
+                  { label: "Nacimiento", value: fmtDate(manager.birthDate) },
+                  { label: "Fecha de ingreso a Rous Boutique", value: fmtDate(manager.hireDate) },
+                  { label: "Pago de ingreso registrado", value: manager.receivesSalary ? "Si" : "No" },
+                  { label: "Monto de ingreso (BOL)", value: fmtMoney(manager.salary) },
+                  { label: "Estado", value: status.label },
+                  { label: "Direccion", value: manager.homeAddress ?? "Sin direccion registrada" },
+                  { label: "Sucursales asignadas", value: manager.branches.length ? manager.branches.map(b => `${b.name} (${b.city})`).join(", ") : "Sin sucursales asignadas" },
+                  { label: "Creado por", value: manager.createdByName ?? "No disponible" },
+                  { label: "Creado el", value: fmtDate(manager.createdAt) },
+                  { label: "Actualizado por", value: manager.updatedByName ?? "No disponible" },
+                  { label: "Actualizado el", value: fmtDate(manager.updatedAt) },
+                ] as { label: string; value: string }[]
+              )
+                .sort((a, b) => a.label.localeCompare(b.label, "es"))
+                .map((row) => (
+                  <TableRow key={row.label}>
+                    <TableCell className="font-medium text-sm text-muted-foreground">{row.label}</TableCell>
+                    <TableCell className="text-sm">{row.value}</TableCell>
+                  </TableRow>
                 ))}
-              </div>
-            )}
-          </section>
-
-          <Separator />
-
-          <section className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Trazabilidad</h4>
-            <div className="grid gap-2 text-sm sm:grid-cols-2">
-              <Row icon={UserRoundCog} label="Creado por" value={manager.createdByName ?? "No disponible"} />
-              <Row icon={Calendar} label="Creado el" value={fmtDate(manager.createdAt)} />
-              <Row icon={UserRoundCog} label="Actualizado por" value={manager.updatedByName ?? "No disponible"} />
-              <Row icon={Calendar} label="Actualizado el" value={fmtDate(manager.updatedAt)} />
-            </div>
-          </section>
+            </TableBody>
+          </Table>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function Row({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      <Icon className="mt-0.5 size-4 text-muted-foreground" />
-      <div>
-        <span className="text-muted-foreground">{label}: </span>
-        <span className="font-medium">{value}</span>
-      </div>
-    </div>
-  );
-}
+ 
 
