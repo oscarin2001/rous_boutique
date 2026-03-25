@@ -132,9 +132,13 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEdit ? <SquarePen className="size-5 text-primary" /> : <PlusCircle className="size-5 text-primary" />}
-            {isEdit ? "Editar Proveedor" : "Nuevo Proveedor"}
+            {isEdit ? `Editar Proveedor: ${supplier?.fullName ?? ""}` : "Nuevo Proveedor"}
           </DialogTitle>
-          <DialogDescription>{isEdit ? "Revisa los cambios antes de guardar." : "Completa la informacion del aliado comercial."}</DialogDescription>
+          <DialogDescription>
+            {isEdit
+              ? `Proveedor seleccionado: ${supplier?.fullName ?? "No disponible"}. Revisa los cambios antes de guardar.`
+              : "Completa la informacion del aliado comercial."}
+          </DialogDescription>
         </DialogHeader>
         {isEdit ? (
           <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
@@ -147,28 +151,130 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions
           <form onSubmit={handleSubmit} className="space-y-4">
             <SupplierFormFields supplier={supplier} branchOptions={branchOptions} managerOptions={managerOptions} selectedBranchIds={selectedBranchIds} onSelectedBranchIdsChange={setSelectedBranchIds} selectedManagerIds={selectedManagerIds} onSelectedManagerIdsChange={setSelectedManagerIds} errors={errors} onFieldInput={(name) => setErrors((prev) => ({ ...prev, [name]: undefined }))} />
             {isEdit && supplier ? (
-              <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-                <p className="mb-1 font-medium text-foreground">Trazabilidad</p>
-                <p>Creado por: {supplier.createdByName ?? "No disponible"}</p>
-                <p>Creado el: {fmtDateTime(supplier.createdAt)}</p>
-                <p>Actualizado por: {supplier.updatedByName ?? "No disponible"}</p>
-                <p>Actualizado el: {fmtDateTime(supplier.updatedAt)}</p>
+              <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="font-medium text-foreground mb-2">Información Actual</p>
+                    <p><strong>Estado:</strong> {supplier.isActive ? "Activo" : "Inactivo"}</p>
+                    <p><strong>Compras:</strong> {supplier?.purchaseCount ?? 0}</p>
+                    <p><strong>Valor Total:</strong> Bs. {(supplier?.totalPurchaseAmount ?? 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground mb-2">Asignaciones Actuales</p>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <p><strong>Sucursales ({supplier.branches.length}):</strong></p>
+                        {supplier.branches.length > 0 ? (
+                          <ul className="list-disc list-inside mt-1">
+                            {supplier.branches.slice(0, 3).map(b => <li key={b.id}>{b.name}</li>)}
+                            {supplier.branches.length > 3 && <li>...y {supplier.branches.length - 3} más</li>}
+                          </ul>
+                        ) : <p className="text-muted-foreground">Ninguna</p>}
+                      </div>
+                      <div>
+                        <p><strong>Gerentes ({supplier.managers.length}):</strong></p>
+                        {supplier.managers.length > 0 ? (
+                          <ul className="list-disc list-inside mt-1">
+                            {supplier.managers.slice(0, 3).map(m => <li key={m.id}>{m.fullName}</li>)}
+                            {supplier.managers.length > 3 && <li>...y {supplier.managers.length - 3} más</li>}
+                          </ul>
+                        ) : <p className="text-muted-foreground">Ninguno</p>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : null}
             <DialogFooter><Button type="submit" disabled={isPending}>{isPending ? "Procesando..." : isEdit ? "Revisar Cambios" : "Crear Proveedor"}</Button></DialogFooter>
           </form>
         ) : step === 2 ? (
           <div className="space-y-4">
-            <div className="rounded-lg border p-3"><h4 className="mb-2 text-sm font-medium">Resumen de cambios</h4>{changes.map((change) => <p key={`${change.label}-${change.from}-${change.to}`} className="text-xs"><strong>{change.label}:</strong> {change.from} {"->"} {change.to}</p>)}</div>
-            <div className="space-y-2">
-              <Label htmlFor="supplier-confirm-name" className="text-xs">Escribe {supplier?.fullName} para confirmar</Label>
-              <Input id="supplier-confirm-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
-              <Label htmlFor="supplier-confirm-password" className="text-xs">Contrasena de administrador</Label>
-              <PasswordInput id="supplier-confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            <div className="rounded-lg border p-4">
+              <h4 className="mb-3 text-sm font-medium flex items-center gap-2">
+                <span className="text-primary">📝</span>
+                Resumen de Cambios Detectados
+              </h4>
+              {changes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No se detectaron cambios en los datos del proveedor.</p>
+              ) : (
+                <div className="space-y-2">
+                  {changes.map((change, index) => (
+                    <div key={index} className="flex items-start gap-3 p-2 rounded bg-muted/30">
+                      <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{change.label}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                          <span className="line-through">{change.from || "Vacío"}</span>
+                          <span className="text-primary">→</span>
+                          <span>{change.to || "Vacío"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Confirmacion final: al continuar, los cambios del proveedor se aplicaran de forma inmediata.</div>
-            {confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}
-            <DialogFooter><Button variant="outline" onClick={() => setStep(1)}>Atras</Button><Button onClick={handleConfirmEdit} disabled={isPending}>{isPending ? "Guardando..." : "Confirmar Edicion"}</Button></DialogFooter>
+            <div className="rounded-lg border p-4">
+              <h4 className="mb-3 text-sm font-medium flex items-center gap-2">
+                <span className="text-amber-600">⚠️</span>
+                Análisis de Impacto de Cambios
+              </h4>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>Los cambios propuestos pueden afectar los siguientes aspectos del sistema:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>Operaciones activas:</strong> {(supplier?.purchaseCount ?? 0) > 0 ? "Puede requerir notificación a gerentes" : "Sin impacto inmediato"}</li>
+                  <li><strong>Asignaciones:</strong> Cambios en sucursales o gerentes afectarán permisos de acceso</li>
+                  <li><strong>Auditoría:</strong> Todos los cambios serán registrados con timestamp y autor</li>
+                  <li><strong>Notificaciones:</strong> Los gerentes asignados recibirán alertas de cambios</li>
+                </ul>
+              </div>
+            </div>
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-4 text-sm">
+              <h4 className="font-medium mb-2 text-primary flex items-center gap-2">
+                <span>🔒</span>
+                Confirmación de Seguridad
+              </h4>
+              <p className="text-muted-foreground mb-3">
+                Para aplicar estos cambios, debes confirmar tu identidad como administrador del sistema.
+              </p>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="supplier-confirm-name" className="text-sm">Escribe exactamente: <strong>{supplier?.fullName ?? "-"}</strong></Label>
+                  <Input
+                    id="supplier-confirm-name"
+                    value={confirmName}
+                    onChange={(e) => setConfirmName(e.target.value)}
+                    placeholder={supplier?.fullName ?? ""}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="supplier-confirm-password" className="text-sm">Contraseña de administrador</Label>
+                  <PasswordInput
+                    id="supplier-confirm-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Ingresa tu contraseña actual"
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+            {confirmMessage ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                <p className="text-sm text-destructive">{confirmMessage}</p>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep(1)}>Atrás</Button>
+              <Button
+                onClick={handleConfirmEdit}
+                disabled={isPending || !confirmName.trim() || !confirmPassword.trim()}
+                className="min-w-[140px]"
+              >
+                {isPending ? "Guardando..." : "Confirmar Cambios"}
+              </Button>
+            </DialogFooter>
           </div>
         ) : null}
       </DialogContent>

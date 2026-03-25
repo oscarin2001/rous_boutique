@@ -103,7 +103,7 @@ export function BranchFormFields({
       <input type="hidden" name="country" value={BOLIVIA_COUNTRY} />
       <div>
         <Label className="mb-1 block" htmlFor="openedAt">Fecha de apertura</Label>
-        <DateInput id="openedAt" name="openedAt" min="1900-01-01" max="2100-12-31" required={!isEdit} defaultValue={branch?.openedAt?.slice(0, 10) ?? ""} onInput={() => onFieldInput?.("openedAt")} />
+        <DateInput id="openedAt" name="openedAt" min="1900-01-01" max="2100-12-31" required={!isEdit} defaultValue={branch?.openedAt?.slice(0, 10) ?? ""} onValueChange={() => onFieldInput?.("openedAt")} />
         <FieldError message={errors?.openedAt} />
       </div>
       <div>

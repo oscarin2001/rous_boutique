@@ -238,7 +238,7 @@ export function ManagerFormFields({
         </div>
 
         <div className="sm:col-span-2">
-          <Label className="mb-1 block" htmlFor="homeAddress">Direccion</Label>
+          <Label className="mb-1 block" htmlFor="homeAddress">Dirección de residencia</Label>
           <Input
             id="homeAddress"
             name="homeAddress"
@@ -253,7 +253,7 @@ export function ManagerFormFields({
         </div>
 
         <div>
-          <Label className="mb-1 block" htmlFor="hireDate">Fecha de ingreso</Label>
+          <Label className="mb-1 block" htmlFor="hireDate">Fecha de ingreso a la empresa</Label>
           <DateInput
             id="hireDate"
             name="hireDate"

@@ -51,6 +51,7 @@ export function SupplierAssignmentsDialog({ open, onOpenChange, supplier, branch
 
   const handleSave = async () => {
     if (!supplier) return;
+    if (!branchOptions.length) return setMessage("No hay sucursales disponibles para asignar.");
     if (!branchIds.length) return setMessage(ADMIN_VALIDATION_MESSAGES.branchRequired);
     if (confirmName.trim().toLowerCase() !== supplier.fullName.toLowerCase()) return setMessage("Debes escribir exactamente el nombre del proveedor.");
     if (!confirmPassword.trim()) return setMessage(ADMIN_VALIDATION_MESSAGES.adminPasswordRequired);
@@ -71,24 +72,32 @@ export function SupplierAssignmentsDialog({ open, onOpenChange, supplier, branch
           <div className="space-y-2 rounded-lg border p-3">
             <Label className="text-sm">Sucursales</Label>
             <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
-              {branchOptions.map((branch) => (
-                <label key={branch.id} className="flex items-center gap-2 rounded px-1 py-1.5 hover:bg-muted/40">
-                  <Checkbox checked={branchSet.has(branch.id)} onCheckedChange={() => toggle(branch.id, branchSet, setBranchIds, branchIds)} />
-                  <span className="text-sm">{branch.name} ({branch.city})</span>
-                </label>
-              ))}
+              {branchOptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay sucursales disponibles para asignar.</p>
+              ) : (
+                branchOptions.map((branch) => (
+                  <label key={branch.id} className="flex items-center gap-2 rounded px-1 py-1.5 hover:bg-muted/40">
+                    <Checkbox checked={branchSet.has(branch.id)} onCheckedChange={() => toggle(branch.id, branchSet, setBranchIds, branchIds)} />
+                    <span className="text-sm">{branch.name} ({branch.city})</span>
+                  </label>
+                ))
+              )}
             </div>
           </div>
 
           <div className="space-y-2 rounded-lg border p-3">
             <Label className="text-sm">Encargados</Label>
             <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
-              {managerOptions.map((manager) => (
-                <label key={manager.id} className="flex items-center gap-2 rounded px-1 py-1.5 hover:bg-muted/40">
-                  <Checkbox checked={managerSet.has(manager.id)} onCheckedChange={() => toggle(manager.id, managerSet, setManagerIds, managerIds)} />
-                  <span className="text-sm">{manager.fullName}</span>
-                </label>
-              ))}
+              {managerOptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay encargados disponibles para asignar.</p>
+              ) : (
+                managerOptions.map((manager) => (
+                  <label key={manager.id} className="flex items-center gap-2 rounded px-1 py-1.5 hover:bg-muted/40">
+                    <Checkbox checked={managerSet.has(manager.id)} onCheckedChange={() => toggle(manager.id, managerSet, setManagerIds, managerIds)} />
+                    <span className="text-sm">{manager.fullName}</span>
+                  </label>
+                ))
+              )}
             </div>
           </div>
         </div>

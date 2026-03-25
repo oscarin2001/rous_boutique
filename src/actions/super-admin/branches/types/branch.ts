@@ -75,6 +75,12 @@ export interface BranchAuditEntry {
   newValue: string | null;
 }
 
+export interface BranchHistoryPage {
+  entries: BranchAuditEntry[];
+  nextCursor: number | null;
+  hasMore: boolean;
+}
+
 export interface BranchHourRow {
   dayOfWeek: number;
   openingTime: string | null;

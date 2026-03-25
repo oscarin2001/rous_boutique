@@ -35,10 +35,6 @@ export function SupplierDetailsDialog({ supplier, open, onOpenChange }: Props) {
           <p><strong>Aliado desde:</strong> {supplier.partnerSince || "Sin fecha"}</p>
           <p><strong>Fin contrato:</strong> {supplier.contractEndAt || "Sin fecha"}</p>
           <p><strong>Contrato indefinido:</strong> {supplier.isIndefinite ? "Si" : "No"}</p>
-          <p><strong>Creado por:</strong> {supplier.createdByName || "No disponible"}</p>
-          <p><strong>Creado el:</strong> {supplier.createdAt ? new Date(supplier.createdAt).toLocaleDateString("es-BO") : "Sin fecha"}</p>
-          <p><strong>Actualizado por:</strong> {supplier.updatedByName || "No disponible"}</p>
-          <p><strong>Actualizado el:</strong> {supplier.updatedAt ? new Date(supplier.updatedAt).toLocaleDateString("es-BO") : "Sin fecha"}</p>
           <div>
             <strong>Sucursales:</strong>
             <div className="mt-1 flex flex-wrap gap-1">

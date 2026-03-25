@@ -128,9 +128,13 @@ export function WarehouseFormDialog({ open, onOpenChange, row, branches, manager
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEdit ? <SquarePen className="size-5 text-primary" /> : <PlusCircle className="size-5 text-primary" />}
-            {isEdit ? "Editar Bodega" : "Nueva Bodega"}
+            {isEdit ? `Editar Bodega: ${row?.name ?? ""}` : "Nueva Bodega"}
           </DialogTitle>
-          <DialogDescription>{isEdit ? "Revisa y confirma en 2 pasos" : "Completa los datos de la bodega"}</DialogDescription>
+          <DialogDescription>
+            {isEdit
+              ? `Bodega seleccionada: ${row?.name ?? "No disponible"}. Revisa y confirma en 2 pasos.`
+              : "Completa los datos de la bodega"}
+          </DialogDescription>
         </DialogHeader>
         {isEdit ? <div className="mb-2 flex gap-2">{[1, 2].map((s) => <div key={s} className={`h-1.5 flex-1 rounded-full ${step >= s ? "bg-primary" : "bg-muted"}`} />)}</div> : null}
         {step === 1 ? (
@@ -148,7 +152,7 @@ export function WarehouseFormDialog({ open, onOpenChange, row, branches, manager
             <DialogFooter><Button type="submit" disabled={isPending}>{isPending ? "Guardando..." : isEdit ? "Revisar Cambios" : "Crear Bodega"}</Button></DialogFooter>
           </form>
         ) : step === 2 ? (
-          <div className="space-y-3"><div className="rounded-lg border p-3 text-sm">{changes.map((c) => <p key={`${c.label}-${c.from}-${c.to}`}><strong>{c.label}:</strong> {c.from} {"->"} {c.to}</p>)}</div><Label htmlFor="wh-confirm-name">Escribe {row?.name} para confirmar</Label><Input id="wh-confirm-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} /><Label htmlFor="wh-confirm-password">Contrasena de administrador</Label><PasswordInput id="wh-confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />{confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}<DialogFooter><Button variant="outline" onClick={() => setStep(1)}>Atras</Button><Button onClick={handleConfirm} disabled={isPending}>{isPending ? "Confirmando..." : "Confirmar Edicion"}</Button></DialogFooter></div>
+          <div className="space-y-3"><div className="rounded-lg border p-3 text-sm">{changes.map((c) => <p key={`${c.label}-${c.from}-${c.to}`}><strong>{c.label}:</strong> {c.from} {"->"} {c.to}</p>)}</div><Label htmlFor="wh-confirm-name">Escribe exactamente: {row?.name ?? "-"}</Label><Input id="wh-confirm-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} placeholder={row?.name ?? ""} /><Label htmlFor="wh-confirm-password">Contrasena de administrador</Label><PasswordInput id="wh-confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />{confirmMessage ? <p className="text-xs text-destructive">{confirmMessage}</p> : null}<DialogFooter><Button variant="outline" onClick={() => setStep(1)}>Atras</Button><Button onClick={handleConfirm} disabled={isPending}>{isPending ? "Confirmando..." : "Confirmar Edicion"}</Button></DialogFooter></div>
         ) : null}
       </DialogContent>
     </Dialog>

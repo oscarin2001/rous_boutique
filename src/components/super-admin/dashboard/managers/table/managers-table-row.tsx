@@ -28,6 +28,8 @@ interface Props {
 
 export function ManagersTableRow({ manager, onView, onEdit, onManage, onHistory, onToggleStatus, onDelete }: Props) {
   const status = getManagerStatusInfo(manager.status);
+  const hasBranches = manager.branches.length > 0;
+  const hasEntryPayment = manager.receivesSalary && manager.salary > 0;
 
   return (
     <TableRow className="hover:bg-muted/30">
@@ -44,15 +46,21 @@ export function ManagersTableRow({ manager, onView, onEdit, onManage, onHistory,
         </div>
       </TableCell>
       <TableCell>
-        <span className="inline-flex items-center gap-1 text-sm">
-          <Building2 className="size-3 text-muted-foreground" />
-          {manager.branches.length}
-        </span>
+        {hasBranches ? (
+          <span className="inline-flex items-center gap-1 text-sm">
+            <Building2 className="size-3 text-muted-foreground" />
+            {manager.branches.length}
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground">Sin sucursal asignada</span>
+        )}
       </TableCell>
       <TableCell>
         <Badge variant={status.variant}>{status.label}</Badge>
       </TableCell>
-      <TableCell className="text-right">{new Intl.NumberFormat("es-BO").format(manager.salary)}</TableCell>
+      <TableCell className="text-right">
+        {hasEntryPayment ? new Intl.NumberFormat("es-BO").format(manager.salary) : <span className="text-muted-foreground">Sin asignar</span>}
+      </TableCell>
       <TableCell>
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>

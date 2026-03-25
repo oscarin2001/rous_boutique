@@ -56,26 +56,38 @@ export async function updateSuperAdminCompetenciesAction(input: UpdateCompetenci
 
   const existing = await prisma.employee.findUnique({
     where: { id: session.employeeId },
-    select: { id: true, skills: true, languages: true },
+    select: {
+      id: true,
+      employeeSkills: { select: { name: true, level: true } },
+      employeeLanguages: { select: { language: true, level: true } },
+    },
   });
 
   if (!existing) return { success: false, error: "Perfil no encontrado" };
 
-  const skillsSerialized = normalizedSkills.length
-    ? normalizedSkills.map((item) => `${item.name}:${item.level}`).join(", ")
-    : null;
-  const languagesSerialized = normalizedLanguages.length
-    ? JSON.stringify(normalizedLanguages)
-    : null;
-
   await prisma.$transaction(async (tx) => {
-    await tx.employee.update({
-      where: { id: existing.id },
-      data: {
-        skills: skillsSerialized,
-        languages: languagesSerialized,
-      },
-    });
+    await tx.employeeSkill.deleteMany({ where: { employeeId: existing.id } });
+    await tx.employeeLanguage.deleteMany({ where: { employeeId: existing.id } });
+
+    if (normalizedSkills.length > 0) {
+      await tx.employeeSkill.createMany({
+        data: normalizedSkills.map((item) => ({
+          employeeId: existing.id,
+          name: item.name,
+          level: String(item.level),
+        })),
+      });
+    }
+
+    if (normalizedLanguages.length > 0) {
+      await tx.employeeLanguage.createMany({
+        data: normalizedLanguages.map((item) => ({
+          employeeId: existing.id,
+          language: `${item.name} [${item.code}]`,
+          level: item.certification ? `${item.level} | ${item.certification}` : item.level,
+        })),
+      });
+    }
 
     await tx.auditLog.create({
       data: {
@@ -83,8 +95,14 @@ export async function updateSuperAdminCompetenciesAction(input: UpdateCompetenci
         entityId: existing.id,
         action: "UPDATE",
         employeeId: existing.id,
-        oldValue: JSON.stringify({ skills: existing.skills ?? null, languages: existing.languages ?? null }),
-        newValue: JSON.stringify({ skills: skillsSerialized, languages: languagesSerialized }),
+        oldValue: JSON.stringify({
+          skills: existing.employeeSkills,
+          languages: existing.employeeLanguages,
+        }),
+        newValue: JSON.stringify({
+          skills: normalizedSkills,
+          languages: normalizedLanguages,
+        }),
       },
     });
   });

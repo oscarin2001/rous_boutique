@@ -15,14 +15,10 @@ export async function getSuperAdminToolbarLanguageAction() {
   const session = await ensureSuperAdminSession();
   if (!session) return { success: false, error: "No autorizado" };
 
-  const employee = await prisma.employee.findUnique({
-    where: { id: session.employeeId },
-    select: { language: true },
-  });
-  if (!employee) return { success: false, error: "Perfil no encontrado" };
+  const settings = await getOrCreateEmployeeSettings(session.employeeId);
 
-  const language = TOOLBAR_LANGUAGES.has(employee.language as ToolbarLanguage)
-    ? (employee.language as ToolbarLanguage)
+  const language = TOOLBAR_LANGUAGES.has(settings.language as ToolbarLanguage)
+    ? (settings.language as ToolbarLanguage)
     : "es";
 
   return { success: true, data: { language } };
@@ -34,25 +30,21 @@ export async function updateSuperAdminToolbarLanguageAction(language: ToolbarLan
 
   if (!TOOLBAR_LANGUAGES.has(language)) return { success: false, error: "Idioma invalido" };
 
-  const existing = await prisma.employee.findUnique({
-    where: { id: session.employeeId },
-    select: { id: true, language: true },
-  });
-  if (!existing) return { success: false, error: "Perfil no encontrado" };
+  const existing = await getOrCreateEmployeeSettings(session.employeeId);
   if (existing.language === language) return { success: true };
 
   await prisma.$transaction(async (tx) => {
-    await tx.employee.update({
-      where: { id: existing.id },
+    await tx.employeeSettings.update({
+      where: { employeeId: session.employeeId },
       data: { language },
     });
 
     await tx.auditLog.create({
       data: {
         entity: "SuperAdminToolbarLanguage",
-        entityId: existing.id,
+        entityId: session.employeeId,
         action: "UPDATE",
-        employeeId: existing.id,
+        employeeId: session.employeeId,
         oldValue: JSON.stringify({ language: existing.language }),
         newValue: JSON.stringify({ language }),
       },
@@ -66,19 +58,13 @@ export async function getSuperAdminSystemSettingsAction() {
   const session = await ensureSuperAdminSession();
   if (!session) return { success: false, error: "No autorizado" };
 
-  const employee = await prisma.employee.findUnique({
-    where: { id: session.employeeId },
-    select: { theme: true, language: true, notifications: true },
-  });
-  if (!employee) return { success: false, error: "Perfil no encontrado" };
-
   const settings = await getOrCreateEmployeeSettings(session.employeeId);
   return {
     success: true,
     data: {
-      theme: employee.theme.toLowerCase() as "light" | "dark" | "system",
-      language: (["es", "en", "pt", "fr"].includes(employee.language) ? employee.language : "es") as "es" | "en" | "pt" | "fr",
-      notifications: employee.notifications,
+      theme: settings.theme.toLowerCase() as "light" | "dark" | "system",
+      language: (["es", "en", "pt", "fr"].includes(settings.language) ? settings.language : "es") as "es" | "en" | "pt" | "fr",
+      notifications: settings.notifications,
       timezone: settings.timezone,
       dateFormat: settings.dateFormat as "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD",
       timeFormat: settings.timeFormat as "12h" | "24h",
@@ -109,7 +95,7 @@ export async function updateSuperAdminSystemSettingsAction(input: UpdateSystemIn
 
   const existingEmployee = await prisma.employee.findUnique({
     where: { id: session.employeeId },
-    select: { theme: true, language: true, notifications: true, auth: { select: { password: true } } },
+    select: { auth: { select: { password: true } } },
   });
   if (!existingEmployee) return { success: false, error: "Perfil no encontrado" };
 
@@ -118,13 +104,12 @@ export async function updateSuperAdminSystemSettingsAction(input: UpdateSystemIn
 
   const existingSettings = await getOrCreateEmployeeSettings(session.employeeId);
   await prisma.$transaction(async (tx) => {
-    await tx.employee.update({
-      where: { id: session.employeeId },
-      data: { theme: parsed.data.theme.toUpperCase() as "LIGHT" | "DARK" | "SYSTEM", language: parsed.data.language, notifications: parsed.data.notifications },
-    });
     await tx.employeeSettings.update({
       where: { employeeId: session.employeeId },
       data: {
+        theme: parsed.data.theme.toUpperCase() as "LIGHT" | "DARK" | "SYSTEM",
+        language: parsed.data.language,
+        notifications: parsed.data.notifications,
         timezone: parsed.data.timezone,
         dateFormat: parsed.data.dateFormat,
         timeFormat: parsed.data.timeFormat,

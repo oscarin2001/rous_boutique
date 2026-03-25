@@ -34,7 +34,7 @@ export async function createBranch(
   data: CreateBranchInput
 ): Promise<BranchActionResult> {
   const session = await getSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
 
   const parsed = createBranchSchema.safeParse(data);
   if (!parsed.success) {

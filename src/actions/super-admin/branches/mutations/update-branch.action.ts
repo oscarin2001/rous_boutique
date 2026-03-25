@@ -34,7 +34,7 @@ export async function updateBranch(
   data: Record<string, unknown>
 ): Promise<BranchActionResult> {
   const session = await getSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
 
   const confirmPassword =
     typeof data.confirmPassword === "string" ? data.confirmPassword : "";

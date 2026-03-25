@@ -18,33 +18,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { InfoHint } from "../components";
 import type { ProfileFieldErrors, ProfileForm } from "../core";
 
-function buildAboutMeText(profile: ProfileForm) {
-  const fullName = `${profile.firstName} ${profile.lastName}`.trim() || "Este profesional";
-  const profession = profile.profession.trim() || "profesional orientado a resultados";
-
-  const skillNames = profile.skills
-    .split(",")
-    .map((chunk) => chunk.trim().split(":")[0]?.trim())
-    .filter(Boolean)
-    .slice(0, 3) as string[];
-  const skillsText = skillNames.length ? skillNames.join(", ") : "liderazgo, coordinacion y mejora continua";
-
-  const languageNames = profile.languages
-    .split(",")
-    .map((chunk) => {
-      const [namePart, levelPart] = chunk.trim().split(":");
-      const name = namePart?.trim();
-      const level = levelPart?.trim();
-      if (!name) return null;
-      return level ? `${name} ${level}` : name;
-    })
-    .filter(Boolean)
-    .slice(0, 3) as string[];
-  const languagesText = languageNames.length ? languageNames.join(", ") : "espanol";
-
-  return `${fullName} se desempena como ${profession}. Se enfoca en la gestion eficiente, el cumplimiento de objetivos y la mejora de procesos. Aporta fortalezas en ${skillsText} y se comunica en ${languagesText}.`;
-}
-
 type Props = {
   profile: ProfileForm;
   profileSnapshot: ProfileForm;
@@ -101,13 +74,6 @@ export function ProfileTab({
     clear("photoUrl");
     toast.success("Foto subida correctamente");
     event.target.value = "";
-  };
-
-  const handleGenerateAboutMe = () => {
-    const generated = buildAboutMeText(profile).slice(0, 600);
-    setProfile((prev) => ({ ...prev, aboutMe: generated }));
-    clear("aboutMe");
-    toast.success("Texto de perfil generado");
   };
 
   const triggerIconClass = (open: boolean) => `size-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`;
@@ -183,7 +149,7 @@ export function ProfileTab({
           <ChevronDownIcon className={triggerIconClass(isProfessionalSummaryOpen)} />
         </CollapsibleTrigger>
         <CollapsibleContent className="grid gap-3 border-t p-4 sm:grid-cols-2">
-          <div className="sm:col-span-2"><div className="flex items-center justify-between gap-2"><Label htmlFor="aboutMe">Acerca de mi</Label><Button type="button" variant="outline" size="sm" disabled={!isEditable} onClick={handleGenerateAboutMe}>Generar texto profesional</Button></div><Textarea id="aboutMe" disabled={!isEditable} value={profile.aboutMe} placeholder="Ejemplo: Soy un profesional orientado a resultados, enfocado en liderazgo de equipos, optimizacion de procesos y crecimiento sostenible del negocio..." onChange={(e) => { setProfile((v) => ({ ...v, aboutMe: e.target.value.slice(0, 600) })); clear("aboutMe"); }} rows={4} /><p className="mt-1 text-xs text-muted-foreground">Redacta un texto profesional sobre tu perfil, experiencia, enfoque y fortalezas.</p>{profileErrors.aboutMe ? <p className="mt-1 text-xs text-destructive">{profileErrors.aboutMe}</p> : null}</div>
+          <div className="sm:col-span-2"><div className="flex items-center justify-between gap-2"><Label htmlFor="aboutMe">Acerca de mi</Label></div><Textarea id="aboutMe" disabled={!isEditable} value={profile.aboutMe} placeholder="Sin cargar" onChange={(e) => { setProfile((v) => ({ ...v, aboutMe: e.target.value.slice(0, 600) })); clear("aboutMe"); }} rows={4} /><p className="mt-1 text-xs text-muted-foreground">Completa manualmente tu descripcion profesional.</p>{profileErrors.aboutMe ? <p className="mt-1 text-xs text-destructive">{profileErrors.aboutMe}</p> : null}</div>
           <div className="sm:col-span-2"><Label htmlFor="skills">Habilidades (max 10, ej: Liderazgo:85, Inventario:78, Ventas:90)</Label><Input id="skills" disabled={!isEditable} value={profile.skills} onChange={(e) => { setProfile((v) => ({ ...v, skills: e.target.value.slice(0, 300) })); clear("skills"); }} />{profileErrors.skills ? <p className="mt-1 text-xs text-destructive">{profileErrors.skills}</p> : null}</div>
           <div className="sm:col-span-2"><Label htmlFor="languages">Idiomas (ej: Espanol:C2:Nativo, Ingles:B2:IELTS)</Label><Input id="languages" disabled={!isEditable} value={profile.languages} onChange={(e) => { setProfile((v) => ({ ...v, languages: e.target.value.slice(0, 500) })); clear("languages"); }} />{profileErrors.languages ? <p className="mt-1 text-xs text-destructive">{profileErrors.languages}</p> : null}</div>
           {isEditable ? (

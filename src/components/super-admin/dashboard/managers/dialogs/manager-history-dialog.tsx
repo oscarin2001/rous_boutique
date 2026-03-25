@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 
 import { History, Loader2 } from "lucide-react";
 
@@ -163,7 +163,7 @@ function describeChange(action: ManagerAuditEntry["action"], key: string, oldVal
   return `${formatValue(key, oldValue)} -> ${formatValue(key, newValue)}`;
 }
 
-export function ManagerHistoryDialog({
+export const ManagerHistoryDialog = React.memo(function ManagerHistoryDialog({
   open,
   onOpenChange,
   entries,
@@ -181,11 +181,11 @@ export function ManagerHistoryDialog({
   onApplyLatest,
 }: Props) {
   const [expandedEntryIds, setExpandedEntryIds] = useState<number[]>([]);
-  const isInvalidDateRange = Boolean(changedFrom && changedTo && changedFrom > changedTo);
+  const isInvalidDateRange = React.useMemo(() => Boolean(changedFrom && changedTo && changedFrom > changedTo), [changedFrom, changedTo]);
 
-  const toggleExpanded = (id: number) => {
+  const toggleExpanded = React.useCallback((id: number) => {
     setExpandedEntryIds((prev) => (prev.includes(id) ? prev.filter((entryId) => entryId !== id) : [...prev, id]));
-  };
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -319,5 +319,5 @@ export function ManagerHistoryDialog({
       </DialogContent>
     </Dialog>
   );
-}
+});
 

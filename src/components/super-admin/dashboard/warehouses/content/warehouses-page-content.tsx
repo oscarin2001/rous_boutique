@@ -5,7 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createWarehouse, deleteWarehouse, getWarehouseHistory, updateWarehouse } from "@/actions/super-admin/warehouses";
-import type { WarehouseHistoryRow, WarehouseMetrics, WarehouseOptionBranch, WarehouseOptionManager, WarehouseRow } from "@/actions/super-admin/warehouses/types";
+import type { WarehouseHistoryPage, WarehouseHistoryRow, WarehouseMetrics, WarehouseOptionBranch, WarehouseOptionManager, WarehouseRow } from "@/actions/super-admin/warehouses/types";
 
 import { WarehouseAssignmentsDialog } from "../dialogs/warehouse-assignments-dialog";
 import { WarehouseDeleteDialog } from "../dialogs/warehouse-delete-dialog";
@@ -22,6 +22,7 @@ interface Props {
 }
 
 export function WarehousesPageContent({ initialRows, options }: Props) {
+  const HISTORY_PAGE_SIZE = 15;
   const [rows, setRows] = useState(initialRows);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<WarehouseRow | null>(null);
@@ -32,6 +33,12 @@ export function WarehousesPageContent({ initialRows, options }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [historyRows, setHistoryRows] = useState<WarehouseHistoryRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [historyNextCursor, setHistoryNextCursor] = useState<number | null>(null);
+  const [historyChangedFrom, setHistoryChangedFrom] = useState("");
+  const [historyChangedTo, setHistoryChangedTo] = useState("");
+  const [historyLatestDays, setHistoryLatestDays] = useState<number | null>(30);
   const [isPending, startTransition] = useTransition();
 
   const metrics = useMemo<WarehouseMetrics>(() => {
@@ -47,11 +54,74 @@ export function WarehousesPageContent({ initialRows, options }: Props) {
     return rows.filter((r) => [r.name, r.address, r.city, ...r.managers.map((m) => m.fullName)].join(" ").toLowerCase().includes(q));
   }, [rows, search]);
 
+  const loadWarehouseHistory = async (warehouseId: number, reset: boolean, latestDaysOverride?: number | null) => {
+    const page: WarehouseHistoryPage = await getWarehouseHistory(warehouseId, {
+      cursor: reset ? null : historyNextCursor,
+      limit: HISTORY_PAGE_SIZE,
+      changedFrom: historyChangedFrom || null,
+      changedTo: historyChangedTo || null,
+      latestDays: latestDaysOverride !== undefined ? latestDaysOverride : historyLatestDays,
+    });
+
+    setHistoryRows((prev) => (reset ? page.rows : [...prev, ...page.rows]));
+    setHistoryHasMore(page.hasMore);
+    setHistoryNextCursor(page.nextCursor);
+  };
+
+  const openHistory = (warehouse: WarehouseRow) => {
+    setSelected(warehouse);
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryRows([]);
+    setHistoryHasMore(false);
+    setHistoryNextCursor(null);
+
+    startTransition(async () => {
+      await loadWarehouseHistory(warehouse.id, true);
+      setHistoryLoading(false);
+    });
+  };
+
+  const handleLoadMoreHistory = () => {
+    if (!selected || !historyHasMore || !historyNextCursor || historyLoadingMore) return;
+    setHistoryLoadingMore(true);
+    startTransition(async () => {
+      await loadWarehouseHistory(selected.id, false);
+      setHistoryLoadingMore(false);
+    });
+  };
+
+  const handleApplyLatestHistory = (days: number | null) => {
+    if (!selected) return;
+    setHistoryLatestDays(days);
+    setHistoryLoading(true);
+    startTransition(async () => {
+      setHistoryRows([]);
+      setHistoryHasMore(false);
+      setHistoryNextCursor(null);
+      await loadWarehouseHistory(selected.id, true, days);
+      setHistoryLoading(false);
+    });
+  };
+
+  const handleApplyHistoryDateRange = () => {
+    if (!selected) return;
+    setHistoryLatestDays(null);
+    setHistoryLoading(true);
+    startTransition(async () => {
+      setHistoryRows([]);
+      setHistoryHasMore(false);
+      setHistoryNextCursor(null);
+      await loadWarehouseHistory(selected.id, true, null);
+      setHistoryLoading(false);
+    });
+  };
+
   return (
     <div className="space-y-6">
       <WarehousesMetrics metrics={metrics} />
       <WarehousesFilters search={search} onSearchChange={setSearch} onCreate={() => { setSelected(null); setFormOpen(true); }} />
-      <WarehousesTable rows={filtered} onView={(r) => { setSelected(r); setDetailsOpen(true); }} onEdit={(r) => { setSelected(r); setFormOpen(true); }} onManage={(r) => { setSelected(r); setManageOpen(true); }} onHistory={(r) => { setSelected(r); setHistoryOpen(true); setHistoryLoading(true); startTransition(async () => { setHistoryRows(await getWarehouseHistory(r.id)); setHistoryLoading(false); }); }} onDelete={(r) => { setSelected(r); setDeleteOpen(true); }} />
+      <WarehousesTable rows={filtered} onView={(r) => { setSelected(r); setDetailsOpen(true); }} onEdit={(r) => { setSelected(r); setFormOpen(true); }} onManage={(r) => { setSelected(r); setManageOpen(true); }} onHistory={openHistory} onDelete={(r) => { setSelected(r); setDeleteOpen(true); }} />
 
       <WarehouseFormDialog open={formOpen} onOpenChange={setFormOpen} row={selected} branches={options.branches} managers={options.managers} isPending={isPending} onSubmit={(data, id) => new Promise((resolve) => { startTransition(async () => { const result = id ? await updateWarehouse(id, data) : await createWarehouse(data); if (result.success && result.warehouse) { setRows((prev) => (id ? prev.map((p) => (p.id === result.warehouse!.id ? result.warehouse! : p)) : [result.warehouse!, ...prev])); setFormOpen(false); setSelected(null); toast.success(id ? "Bodega actualizada" : "Bodega creada"); } else if (!result.fieldErrors) toast.error(result.error || "No se pudo guardar"); resolve(result); }); })} />
 
@@ -79,7 +149,32 @@ export function WarehousesPageContent({ initialRows, options }: Props) {
           resolve(result);
         }); })}
       />
-      <WarehouseHistoryDialog open={historyOpen} onOpenChange={(v) => { setHistoryOpen(v); if (!v) setHistoryRows([]); }} loading={historyLoading} rows={historyRows} />
+      <WarehouseHistoryDialog
+        open={historyOpen}
+        onOpenChange={(v) => {
+          setHistoryOpen(v);
+          if (!v) {
+            setHistoryRows([]);
+            setHistoryLoading(false);
+            setHistoryLoadingMore(false);
+            setHistoryHasMore(false);
+            setHistoryNextCursor(null);
+          }
+        }}
+        loading={historyLoading}
+        rows={historyRows}
+        hasMore={historyHasMore}
+        isLoadingMore={historyLoadingMore}
+        changedFrom={historyChangedFrom}
+        changedTo={historyChangedTo}
+        latestDays={historyLatestDays}
+        onLoadMore={handleLoadMoreHistory}
+        onChangedFromChange={setHistoryChangedFrom}
+        onChangedToChange={setHistoryChangedTo}
+        onLatestDaysChange={setHistoryLatestDays}
+        onApplyDateRange={handleApplyHistoryDateRange}
+        onApplyLatest={handleApplyLatestHistory}
+      />
       <WarehouseDeleteDialog row={selected} open={deleteOpen} onOpenChange={setDeleteOpen} isPending={isPending} onConfirm={(password) => startTransition(async () => { if (!selected) return; const result = await deleteWarehouse(selected.id, password); if (result.success) { setRows((prev) => prev.filter((p) => p.id !== selected.id)); setDeleteOpen(false); setSelected(null); toast.success("Bodega eliminada"); } else toast.error(result.error || "No se pudo eliminar"); })} />
     </div>
   );

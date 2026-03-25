@@ -76,6 +76,12 @@ export interface SupplierHistoryRow {
   createdAt: string;
 }
 
+export interface SupplierHistoryPage {
+  rows: SupplierHistoryRow[];
+  nextCursor: number | null;
+  hasMore: boolean;
+}
+
 export interface SupplierMetrics {
   totalSuppliers: number;
   activeSuppliers: number;

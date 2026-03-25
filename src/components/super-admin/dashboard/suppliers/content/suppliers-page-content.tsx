@@ -9,11 +9,14 @@ import {
   getSuppliers,
   getSupplierMetrics,
   getSupplierOptions,
+  getSupplierHistory,
   saveSupplierAction,
   deleteSupplierAction,
   toggleSupplierStatusAction,
 } from "@/actions/super-admin/suppliers";
 import type {
+  SupplierHistoryPage,
+  SupplierHistoryRow,
   SupplierRow,
   SupplierMetrics as SupplierMetricsType,
   SupplierBranchOption,
@@ -29,6 +32,7 @@ import { SupplierAssignmentsDialog } from "../dialogs";
 
 
 export function SuppliersPageContent() {
+  const HISTORY_PAGE_SIZE = 15;
   const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
   const [metrics, setMetrics] = useState<SupplierMetricsType | null>(null);
   const [options, setOptions] = useState<{ branches: SupplierBranchOption[]; managers: SupplierManagerOption[] }>({ branches: [], managers: [] });
@@ -39,6 +43,15 @@ export function SuppliersPageContent() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyRows, setHistoryRows] = useState<SupplierHistoryRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [historyNextCursor, setHistoryNextCursor] = useState<number | null>(null);
+  const [historyChangedFrom, setHistoryChangedFrom] = useState("");
+  const [historyChangedTo, setHistoryChangedTo] = useState("");
+  const [historyLatestDays, setHistoryLatestDays] = useState<number | null>(30);
 
   const fetchData = async () => {
     const [s, m, o] = await Promise.all([
@@ -65,10 +78,10 @@ export function SuppliersPageContent() {
     setIsPending(false);
     return res;
   };
-  const confirmDelete = async (password: string) => {
+  const confirmDelete = async (password: string, reason: string) => {
     if (!selectedSupplier) return;
     setIsPending(true);
-    const res = await deleteSupplierAction(selectedSupplier.id, password);
+    const res = await deleteSupplierAction(selectedSupplier.id, password, reason);
     if (res.success) {
       toast.success("Proveedor eliminado");
       setDeleteOpen(false);
@@ -94,6 +107,60 @@ export function SuppliersPageContent() {
       s.email?.toLowerCase().includes(search.toLowerCase()) ||
       s.city?.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const loadSupplierHistory = async (supplierId: number, reset: boolean, latestDaysOverride?: number | null) => {
+    const page: SupplierHistoryPage = await getSupplierHistory(supplierId, {
+      cursor: reset ? null : historyNextCursor,
+      limit: HISTORY_PAGE_SIZE,
+      changedFrom: historyChangedFrom || null,
+      changedTo: historyChangedTo || null,
+      latestDays: latestDaysOverride !== undefined ? latestDaysOverride : historyLatestDays,
+    });
+
+    setHistoryRows((prev) => (reset ? page.rows : [...prev, ...page.rows]));
+    setHistoryHasMore(page.hasMore);
+    setHistoryNextCursor(page.nextCursor);
+  };
+
+  const openHistory = async (supplier: SupplierRow) => {
+    setSelectedSupplier(supplier);
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryRows([]);
+    setHistoryHasMore(false);
+    setHistoryNextCursor(null);
+    await loadSupplierHistory(supplier.id, true);
+    setHistoryLoading(false);
+  };
+
+  const loadMoreHistory = async () => {
+    if (!selectedSupplier || !historyHasMore || !historyNextCursor || historyLoadingMore) return;
+    setHistoryLoadingMore(true);
+    await loadSupplierHistory(selectedSupplier.id, false);
+    setHistoryLoadingMore(false);
+  };
+
+  const applyHistoryFilter = async (latestDays: number | null) => {
+    if (!selectedSupplier) return;
+    setHistoryLatestDays(latestDays);
+    setHistoryLoading(true);
+    setHistoryRows([]);
+    setHistoryHasMore(false);
+    setHistoryNextCursor(null);
+    await loadSupplierHistory(selectedSupplier.id, true, latestDays);
+    setHistoryLoading(false);
+  };
+
+  const applyHistoryDateRange = async () => {
+    if (!selectedSupplier) return;
+    setHistoryLatestDays(null);
+    setHistoryLoading(true);
+    setHistoryRows([]);
+    setHistoryHasMore(false);
+    setHistoryNextCursor(null);
+    await loadSupplierHistory(selectedSupplier.id, true, null);
+    setHistoryLoading(false);
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -126,6 +193,7 @@ export function SuppliersPageContent() {
           setSelectedSupplier(s);
           setFormOpen(true);
         }}
+        onHistory={openHistory}
         onManage={(s) => {
           setSelectedSupplier(s);
           setManageOpen(true);
@@ -146,6 +214,14 @@ export function SuppliersPageContent() {
         formOpen={formOpen}
         deleteOpen={deleteOpen}
         detailsOpen={detailsOpen}
+        historyOpen={historyOpen}
+        historyRows={historyRows}
+        historyLoading={historyLoading}
+        historyHasMore={historyHasMore}
+        historyLoadingMore={historyLoadingMore}
+        historyChangedFrom={historyChangedFrom}
+        historyChangedTo={historyChangedTo}
+        historyLatestDays={historyLatestDays}
         isPending={isPending}
         onFormOpenChange={setFormOpen}
         onDeleteOpenChange={setDeleteOpen}
@@ -153,6 +229,22 @@ export function SuppliersPageContent() {
           setDetailsOpen(value);
           if (!value) setSelectedSupplier(null);
         }}
+        onHistoryOpenChange={(value) => {
+          setHistoryOpen(value);
+          if (!value) {
+            setHistoryRows([]);
+            setHistoryLoading(false);
+            setHistoryLoadingMore(false);
+            setHistoryHasMore(false);
+            setHistoryNextCursor(null);
+          }
+        }}
+        onHistoryLoadMore={loadMoreHistory}
+        onHistoryChangedFromChange={setHistoryChangedFrom}
+        onHistoryChangedToChange={setHistoryChangedTo}
+        onHistoryLatestDaysChange={setHistoryLatestDays}
+        onHistoryApplyDateRange={applyHistoryDateRange}
+        onHistoryApplyLatest={applyHistoryFilter}
         onSubmit={handleSave}
         onConfirmDelete={confirmDelete}
       />

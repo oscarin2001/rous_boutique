@@ -443,16 +443,6 @@ export function ManagerFormDialog({
               isEdit={isEdit}
             />
 
-            {isEdit && manager ? (
-              <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-                <p className="mb-1 font-medium text-foreground">Trazabilidad</p>
-                <p>Creado por: {manager.createdByName ?? "No disponible"}</p>
-                <p>Creado el: {fmtDateTime(manager.createdAt)}</p>
-                <p>Actualizado por: {manager.updatedByName ?? "No disponible"}</p>
-                <p>Actualizado el: {fmtDateTime(manager.updatedAt)}</p>
-              </div>
-            ) : null}
-
             {confirmMessage ? <p className="text-sm text-destructive">{confirmMessage}</p> : null}
 
             <DialogFooter>

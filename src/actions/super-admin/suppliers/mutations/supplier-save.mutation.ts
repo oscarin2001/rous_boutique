@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
-import { verifySessionPassword } from "../helpers/security";
+import { enforceAdminPasswordCheck, enforceSensitiveActionRateLimit } from "../helpers/security";
 import { createSupplierSchema, updateSupplierSchema } from "../schemas/supplier.schema";
 import type { SupplierActionResult, SupplierFormField } from "../types/supplier";
 
@@ -18,6 +18,9 @@ export async function saveSupplierAction(
   try {
     const session = await getSession();
     if (!session) return { success: false, error: "No autorizado" };
+
+    const rateLimitError = enforceSensitiveActionRateLimit(session);
+    if (rateLimitError) return { success: false, error: rateLimitError };
 
     const validated = id
       ? updateSupplierSchema.safeParse(data)
@@ -35,12 +38,12 @@ export async function saveSupplierAction(
     const confirmPassword = typeof data.confirmPassword === "string" ? data.confirmPassword : "";
 
     if (id) {
-      const validPassword = await verifySessionPassword(session, confirmPassword ?? "");
-      if (!validPassword) {
+      const passwordError = await enforceAdminPasswordCheck(session, confirmPassword, false);
+      if (passwordError) {
         return {
           success: false,
-          error: "Contrasena de confirmacion invalida",
-          fieldErrors: { confirmPassword: "Contrasena invalida" },
+          error: passwordError,
+          fieldErrors: { confirmPassword: passwordError },
         };
       }
     }
@@ -53,6 +56,32 @@ export async function saveSupplierAction(
     };
 
     if (id) {
+      // Get current supplier data for audit
+      const currentSupplier = await prisma.supplier.findUnique({
+        where: { id },
+        select: {
+          firstName: true,
+          lastName: true,
+          phone: true,
+          email: true,
+          address: true,
+          city: true,
+          department: true,
+          country: true,
+          ci: true,
+          notes: true,
+          birthDate: true,
+          partnerSince: true,
+          contractEndAt: true,
+          isIndefinite: true,
+          isActive: true,
+          branches: { select: { branchId: true } },
+          managers: { select: { employeeId: true } }
+        }
+      });
+
+      if (!currentSupplier) return { success: false, error: "Proveedor no encontrado" };
+
       await prisma.$transaction(async (tx) => {
         await tx.supplier.update({ where: { id }, data: { ...payload, isActive: payload.isActive ?? undefined } });
 
@@ -70,11 +99,42 @@ export async function saveSupplierAction(
           }
         }
 
+        // Create detailed audit log
+        const changes: Record<string, { old: any; new: any }> = {};
+
+        const fieldsToCheck = [
+          'firstName', 'lastName', 'phone', 'email', 'address', 'city', 'department', 'country', 'ci', 'notes',
+          'birthDate', 'partnerSince', 'contractEndAt', 'isIndefinite', 'isActive'
+        ] as const;
+
+        for (const field of fieldsToCheck) {
+          if (payload[field] !== undefined && payload[field] !== currentSupplier[field]) {
+            changes[field] = { old: currentSupplier[field], new: payload[field] };
+          }
+        }
+
+        if (branchIds !== undefined) {
+          const oldBranchIds = currentSupplier.branches.map(b => b.branchId).sort();
+          const newBranchIds = branchIds.sort();
+          if (JSON.stringify(oldBranchIds) !== JSON.stringify(newBranchIds)) {
+            changes.branches = { old: oldBranchIds, new: newBranchIds };
+          }
+        }
+
+        if (managerIds !== undefined) {
+          const oldManagerIds = currentSupplier.managers.map(m => m.employeeId).sort();
+          const newManagerIds = managerIds.sort();
+          if (JSON.stringify(oldManagerIds) !== JSON.stringify(newManagerIds)) {
+            changes.managers = { old: oldManagerIds, new: newManagerIds };
+          }
+        }
+
         await tx.auditLog.create({
           data: {
             entity: "Supplier",
             entityId: id,
             action: "UPDATE",
+            oldValue: JSON.stringify(changes),
             employeeId: session.employeeId,
           },
         });
@@ -107,6 +167,23 @@ export async function saveSupplierAction(
           entity: "Supplier",
           entityId: created.id,
           action: "CREATE",
+          newValue: JSON.stringify({
+            name: `${payload.firstName} ${payload.lastName}`,
+            phone: payload.phone,
+            email: payload.email,
+            address: payload.address,
+            city: payload.city,
+            department: payload.department,
+            country: payload.country,
+            ci: payload.ci,
+            birthDate: payload.birthDate,
+            partnerSince: payload.partnerSince,
+            contractEndAt: payload.contractEndAt,
+            isIndefinite: payload.isIndefinite,
+            isActive: payload.isActive,
+            branchCount: branchIds?.length ?? 0,
+            managerCount: managerIds?.length ?? 0
+          }),
           employeeId: session.employeeId,
         },
       });

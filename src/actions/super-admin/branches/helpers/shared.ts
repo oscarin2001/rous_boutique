@@ -47,24 +47,33 @@ type BranchWithRelations = {
   }[];
   hours?: {
     dayOfWeek: number;
-    openingTime: string | null;
-    closingTime: string | null;
+    openingMinutes: number | null;
+    closingMinutes: number | null;
     isClosed: boolean;
   }[];
 };
 
 const DEFAULT_HOURS: Record<
   number,
-  { openingTime: string | null; closingTime: string | null; isClosed: boolean }
+  { openingMinutes: number | null; closingMinutes: number | null; isClosed: boolean }
 > = {
-  0: { openingTime: null, closingTime: null, isClosed: true },
-  1: { openingTime: "09:00", closingTime: "18:00", isClosed: false },
-  2: { openingTime: "09:00", closingTime: "18:00", isClosed: false },
-  3: { openingTime: "09:00", closingTime: "18:00", isClosed: false },
-  4: { openingTime: "09:00", closingTime: "18:00", isClosed: false },
-  5: { openingTime: "09:00", closingTime: "18:00", isClosed: false },
-  6: { openingTime: "10:00", closingTime: "14:00", isClosed: false },
+  0: { openingMinutes: null, closingMinutes: null, isClosed: true },
+  1: { openingMinutes: 540, closingMinutes: 1080, isClosed: false },
+  2: { openingMinutes: 540, closingMinutes: 1080, isClosed: false },
+  3: { openingMinutes: 540, closingMinutes: 1080, isClosed: false },
+  4: { openingMinutes: 540, closingMinutes: 1080, isClosed: false },
+  5: { openingMinutes: 540, closingMinutes: 1080, isClosed: false },
+  6: { openingMinutes: 600, closingMinutes: 840, isClosed: false },
 };
+
+function minutesToTime(value: number | null): string | null {
+  if (value === null) return null;
+  const hours = Math.floor(value / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (value % 60).toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
 
 export function serializeBranch(branch: BranchWithRelations): BranchRow {
   const managersById = new Map<number, { id: number; name: string }>();
@@ -131,8 +140,8 @@ export function serializeBranch(branch: BranchWithRelations): BranchRow {
     employeeCount: employeeIds.size,
     hours: (branch.hours ?? []).map((h) => ({
       dayOfWeek: h.dayOfWeek,
-      openingTime: h.openingTime,
-      closingTime: h.closingTime,
+      openingTime: minutesToTime(h.openingMinutes),
+      closingTime: minutesToTime(h.closingMinutes),
       isClosed: h.isClosed,
     })),
   };
@@ -142,8 +151,8 @@ export function buildDefaultHours(branchId: number) {
   return Array.from({ length: 7 }, (_, day) => ({
     branchId,
     dayOfWeek: day,
-    openingTime: DEFAULT_HOURS[day].openingTime,
-    closingTime: DEFAULT_HOURS[day].closingTime,
+    openingMinutes: DEFAULT_HOURS[day].openingMinutes,
+    closingMinutes: DEFAULT_HOURS[day].closingMinutes,
     isClosed: DEFAULT_HOURS[day].isClosed,
   }));
 }

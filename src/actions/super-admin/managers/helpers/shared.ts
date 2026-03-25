@@ -6,14 +6,18 @@ type EmployeeWithRelations = {
   lastName: string;
   ci: string;
   phone: string | null;
-  birthDate: Date | null;
-  salary: unknown;
-  contributionType: "NONE" | "CONTRIBUTES" | "PAID";
-  homeAddress: string | null;
-  hireDate: Date;
   status: "ACTIVE" | "DEACTIVATED" | "INACTIVE";
   createdAt: Date;
   updatedAt: Date | null;
+  employeeProfile: {
+    birthDate: Date | null;
+    homeAddress: string | null;
+  } | null;
+  employeeEmployment: {
+    salary: unknown;
+    contributionType: "NONE" | "CONTRIBUTES" | "PAID";
+    hireDate: Date;
+  } | null;
   createdBy: { firstName: string; lastName: string } | null;
   updatedBy: { firstName: string; lastName: string } | null;
   role: { code: string };
@@ -34,8 +38,8 @@ function decimalToNumber(value: unknown): number {
 
 export function serializeManager(employee: EmployeeWithRelations): ManagerRow {
   const fullName = `${employee.firstName} ${employee.lastName}`.trim();
-  const salary = decimalToNumber(employee.salary);
-  const receivesSalary = employee.contributionType === "PAID" || salary > 0;
+  const salary = decimalToNumber(employee.employeeEmployment?.salary ?? 0);
+  const receivesSalary = employee.employeeEmployment?.contributionType === "PAID" || salary > 0;
 
   return {
     id: employee.id,
@@ -47,9 +51,9 @@ export function serializeManager(employee: EmployeeWithRelations): ManagerRow {
     email: employee.auth.username,
     salary,
     receivesSalary,
-    homeAddress: employee.homeAddress,
-    birthDate: employee.birthDate?.toISOString() ?? null,
-    hireDate: employee.hireDate.toISOString(),
+    homeAddress: employee.employeeProfile?.homeAddress ?? null,
+    birthDate: employee.employeeProfile?.birthDate?.toISOString() ?? null,
+    hireDate: employee.employeeEmployment?.hireDate?.toISOString() ?? employee.createdAt.toISOString(),
     status: employee.status,
     branches: employee.employeeBranches.map((item) => ({
       id: item.branch.id,

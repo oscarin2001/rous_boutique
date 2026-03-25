@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
+import { getManagerStatusInfo } from "../utils/manager-status";
+
 interface Props {
   manager: ManagerRow | null;
   open: boolean;
@@ -80,11 +82,11 @@ export function ManagerDeleteDialog({ manager, open, onOpenChange, onConfirm, is
         </div>
 
         <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          <p className="mb-1 font-medium text-foreground">Trazabilidad</p>
-          <p>Creado por: {manager.createdByName ?? "No disponible"}</p>
-          <p>Creado el: {fmtDateTime(manager.createdAt)}</p>
-          <p>Actualizado por: {manager.updatedByName ?? "No disponible"}</p>
-          <p>Actualizado el: {fmtDateTime(manager.updatedAt)}</p>
+          <p className="mb-1 font-medium text-foreground">Información del encargado</p>
+          <p>Nombre: {manager.fullName}</p>
+          <p>CI: {manager.ci}</p>
+          <p>Estado: {getManagerStatusInfo(manager.status).label}</p>
+          <p>Sucursales asignadas: {manager.branches.length}</p>
         </div>
 
         {step === 1 ? (

@@ -56,6 +56,12 @@ export interface WarehouseHistoryRow {
   createdAt: string;
 }
 
+export interface WarehouseHistoryPage {
+  rows: WarehouseHistoryRow[];
+  nextCursor: number | null;
+  hasMore: boolean;
+}
+
 export interface WarehouseOptionBranch {
   id: number;
   name: string;

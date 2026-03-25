@@ -286,13 +286,13 @@ export function BranchFormDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEdit ? <SquarePen className="size-5 text-primary" /> : <PlusCircle className="size-5 text-primary" />}
-            {isEdit ? "Editar Sucursal" : "Nueva Sucursal"}
+            {isEdit ? `Editar Sucursal: ${branch?.name ?? ""}` : "Nueva Sucursal"}
           </DialogTitle>
           <DialogDescription>
             {isEdit
               ? step === 1
-                ? "Modifica los datos y revisa los cambios antes de confirmar."
-                : "Confirma los cambios y valida con contraseña."
+                ? `Sucursal seleccionada: ${branch?.name ?? "No disponible"}. Modifica los datos y revisa los cambios antes de confirmar.`
+                : `Confirma los cambios para ${branch?.name ?? "esta sucursal"} y valida con contraseña.`
               : "Completa todos los datos para crear la sucursal."}
           </DialogDescription>
         </DialogHeader>
@@ -339,7 +339,7 @@ export function BranchFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirm-name">Escribe el nombre de la sucursal para confirmar</Label>
+              <Label htmlFor="confirm-name">Escribe exactamente: {branch?.name ?? "-"}</Label>
               <Input id="confirm-name" value={confirmName} onChange={(event) => setConfirmName(event.target.value)} />
             </div>
 

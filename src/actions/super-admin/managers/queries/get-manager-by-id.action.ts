@@ -9,13 +9,15 @@ import { serializeManagerDetails } from "../helpers/shared";
 
 export async function getManagerById(id: number): Promise<ManagerDetails | null> {
   const session = await getSession();
-  if (!session) return null;
+  if (!session || session.roleCode !== "SUPERADMIN") return null;
 
   const manager = await prisma.employee.findUnique({
     where: { id },
     include: {
       role: { select: { code: true } },
       auth: { select: { username: true, isActive: true } },
+      employeeProfile: { select: { birthDate: true, homeAddress: true } },
+      employeeEmployment: { select: { salary: true, contributionType: true, hireDate: true } },
       createdBy: { select: { firstName: true, lastName: true } },
       updatedBy: { select: { firstName: true, lastName: true } },
       employeeBranches: {

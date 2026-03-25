@@ -87,15 +87,19 @@ export function DateInput({
     setInternalValue(normalizeToIsoDate(defaultValue));
   }, [defaultValue, isControlled]);
 
-  const minDate = useMemo(() => parseIsoDate(normalizeToIsoDate(min)), [min]);
-  const maxDate = useMemo(() => parseIsoDate(normalizeToIsoDate(max)), [max]);
-
   const setDateValue = (nextValue: string) => {
     if (!isControlled) setInternalValue(nextValue);
     onValueChange?.(nextValue);
   };
 
-  const selectedDate = parseIsoDate(currentValue);
+  const selectedDate = useMemo(() => parseIsoDate(currentValue), [currentValue]);
+  const minDate = useMemo(() => parseIsoDate(normalizeToIsoDate(min)), [min]);
+  const maxDate = useMemo(() => parseIsoDate(normalizeToIsoDate(max)), [max]);
+  const disabledDates = useMemo(() => (date: Date) => {
+    if (minDate && date < minDate) return true;
+    if (maxDate && date > maxDate) return true;
+    return false;
+  }, [minDate, maxDate]);
 
   return (
     <div className="space-y-1">
@@ -123,11 +127,7 @@ export function DateInput({
             mode="single"
             selected={selectedDate}
             onSelect={(date) => setDateValue(date ? formatIsoDate(date) : "")}
-            disabled={(date) => {
-              if (minDate && date < minDate) return true;
-              if (maxDate && date > maxDate) return true;
-              return false;
-            }}
+            disabled={disabledDates}
           />
         </DropdownMenuContent>
       </DropdownMenu>

@@ -196,6 +196,7 @@ body {
   max-width: 500px;
   max-height: 85vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Extra wide variant for create/update/view dialogs */
@@ -204,6 +205,14 @@ body {
   max-width: 42rem;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Prevent long unbroken strings from breaking modal layouts */
+.sa-modal :where(p, span, div, li, td, th, dd),
+.sa-modal-wide :where(p, span, div, li, td, th, dd) {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Keep form labels inside modals visually separated from inputs */

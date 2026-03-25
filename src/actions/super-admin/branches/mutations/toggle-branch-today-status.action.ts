@@ -15,7 +15,7 @@ export async function toggleBranchTodayStatus(
   closeToday: boolean
 ): Promise<BranchActionResult> {
   const session = await getSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
 
   const branch = await prisma.branch.findUnique({ where: { id: branchId } });
   if (!branch) return { success: false, error: "Sucursal no encontrada" };
@@ -63,8 +63,8 @@ export async function toggleBranchTodayStatus(
       await prisma.branchHour.update({
         where: { branchId_dayOfWeek: { branchId, dayOfWeek: today } },
         data: {
-          openingTime: todayHour.openingTime ?? "09:00",
-          closingTime: todayHour.closingTime ?? "18:00",
+          openingMinutes: todayHour.openingMinutes ?? 540,
+          closingMinutes: todayHour.closingMinutes ?? 1080,
           isClosed: false,
         },
       });

@@ -5,6 +5,7 @@ import {
   Pencil, 
   Trash, 
   Eye, 
+  History,
   CheckCircle2, 
   XCircle 
 } from "lucide-react";
@@ -35,6 +36,7 @@ import {
 interface Props {
   suppliers: SupplierRow[];
   onEdit: (supplier: SupplierRow) => void;
+  onHistory: (supplier: SupplierRow) => void;
   onManage: (supplier: SupplierRow) => void;
   onDelete: (supplier: SupplierRow) => void;
   onToggleStatus: (supplier: SupplierRow) => void;
@@ -44,6 +46,7 @@ interface Props {
 export function SuppliersTable({
   suppliers,
   onEdit,
+  onHistory,
   onManage,
   onDelete,
   onToggleStatus,
@@ -113,6 +116,7 @@ export function SuppliersTable({
                       </DropdownMenuGroup>
                       <DropdownMenuItem onClick={() => onViewDetails(s)}><Eye className="mr-2 size-4" /> Ver Detalles</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onEdit(s)}><Pencil className="mr-2 size-4" /> Editar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onHistory(s)}><History className="mr-2 size-4" /> Historial</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onManage(s)}><Eye className="mr-2 size-4" /> Gestionar asignaciones</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onToggleStatus(s)}>
                         {s.isActive ? (

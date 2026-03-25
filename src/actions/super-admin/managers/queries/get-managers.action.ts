@@ -10,6 +10,8 @@ import { serializeManager } from "../helpers/shared";
 const includeManager = {
   role: { select: { code: true } },
   auth: { select: { username: true, isActive: true } },
+  employeeProfile: { select: { birthDate: true, homeAddress: true } },
+  employeeEmployment: { select: { salary: true, contributionType: true, hireDate: true } },
   createdBy: { select: { firstName: true, lastName: true } },
   updatedBy: { select: { firstName: true, lastName: true } },
   employeeBranches: {
@@ -22,7 +24,7 @@ const includeManager = {
 
 export async function getManagers(): Promise<ManagerRow[]> {
   const session = await getSession();
-  if (!session) return [];
+  if (!session || session.roleCode !== "SUPERADMIN") return [];
 
   const managers = await prisma.employee.findMany({
     where: {
@@ -38,7 +40,7 @@ export async function getManagers(): Promise<ManagerRow[]> {
 
 export async function getManagersMetrics(): Promise<ManagerMetrics> {
   const session = await getSession();
-  if (!session) {
+  if (!session || session.roleCode !== "SUPERADMIN") {
     return {
       total: 0,
       active: 0,

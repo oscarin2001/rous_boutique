@@ -98,17 +98,17 @@ export function SupplierBasicFields({ supplier, errors, onFieldInput }: Props) {
       </div>
       <div>
         <Label className="mb-1 block" htmlFor="birthDate">Fecha de Nacimiento</Label>
-        <DateInput id="birthDate" name="birthDate" min="1900-01-01" max="2100-12-31" defaultValue={supplier?.birthDate ?? ""} onInput={() => onFieldInput?.("birthDate")} />
+        <DateInput id="birthDate" name="birthDate" min="1900-01-01" max="2100-12-31" defaultValue={supplier?.birthDate ?? ""} onValueChange={() => onFieldInput?.("birthDate")} />
         <FieldError message={errors?.birthDate} />
       </div>
       <div>
         <Label className="mb-1 block" htmlFor="partnerSince">Aliado Desde</Label>
-        <DateInput id="partnerSince" name="partnerSince" min="1900-01-01" max="2100-12-31" defaultValue={supplier?.partnerSince ?? ""} onInput={() => onFieldInput?.("partnerSince")} />
+        <DateInput id="partnerSince" name="partnerSince" min="1900-01-01" max="2100-12-31" defaultValue={supplier?.partnerSince ?? ""} onValueChange={() => onFieldInput?.("partnerSince")} />
         <FieldError message={errors?.partnerSince} />
       </div>
       <div>
         <Label className="mb-1 block" htmlFor="contractEndAt">Fin de Contrato</Label>
-        <DateInput id="contractEndAt" name="contractEndAt" min="1900-01-01" max="2100-12-31" defaultValue={supplier?.contractEndAt ?? ""} disabled={isIndefinite} onInput={() => onFieldInput?.("contractEndAt")} />
+        <DateInput id="contractEndAt" name="contractEndAt" min="1900-01-01" max="2100-12-31" defaultValue={supplier?.contractEndAt ?? ""} disabled={isIndefinite} onValueChange={() => onFieldInput?.("contractEndAt")} />
         <FieldError message={errors?.contractEndAt} />
       </div>
 

@@ -34,7 +34,7 @@ const MAX_MANAGERS_PER_BRANCH = 2;
 
 export async function createManager(data: Record<string, unknown>): Promise<ManagerActionResult> {
   const session = await getSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
 
   const parsed = createManagerSchema.safeParse(data);
   if (!parsed.success) {
@@ -112,22 +112,26 @@ export async function createManager(data: Record<string, unknown>): Promise<Mana
         lastName: parsed.data.lastName,
         ci: parsed.data.ci,
         phone: parsed.data.phone || null,
-        salary: parsed.data.receivesSalary ? parsed.data.salary ?? 0 : 0,
-        contributionType: parsed.data.receivesSalary ? "PAID" : "NONE",
-        birthDate: parsed.data.birthDate,
-        homeAddress: parsed.data.homeAddress || null,
-        hireDate: parsed.data.hireDate,
+        branchId: branchIds[0] ?? null,
         status: "ACTIVE",
         createdById: session.employeeId,
       },
-      include: {
-        role: { select: { code: true } },
-        auth: { select: { username: true, isActive: true } },
-        createdBy: { select: { firstName: true, lastName: true } },
-        updatedBy: { select: { firstName: true, lastName: true } },
-        employeeBranches: {
-          select: { branch: { select: { id: true, name: true, city: true } } },
-        },
+    });
+
+    await tx.employeeProfile.create({
+      data: {
+        employeeId: employee.id,
+        birthDate: parsed.data.birthDate,
+        homeAddress: parsed.data.homeAddress || null,
+      },
+    });
+
+    await tx.employeeEmployment.create({
+      data: {
+        employeeId: employee.id,
+        salary: parsed.data.receivesSalary ? parsed.data.salary ?? 0 : 0,
+        contributionType: parsed.data.receivesSalary ? "PAID" : "NONE",
+        hireDate: parsed.data.hireDate,
       },
     });
 
@@ -142,6 +146,8 @@ export async function createManager(data: Record<string, unknown>): Promise<Mana
       include: {
         role: { select: { code: true } },
         auth: { select: { username: true, isActive: true } },
+        employeeProfile: { select: { birthDate: true, homeAddress: true } },
+        employeeEmployment: { select: { salary: true, contributionType: true, hireDate: true } },
         createdBy: { select: { firstName: true, lastName: true } },
         updatedBy: { select: { firstName: true, lastName: true } },
         employeeBranches: {
@@ -160,9 +166,9 @@ export async function createManager(data: Record<string, unknown>): Promise<Mana
         lastName: hydrated.lastName,
         ci: hydrated.ci,
         email: hydrated.auth.username,
-        birthDate: hydrated.birthDate?.toISOString() ?? null,
-        receivesSalary: hydrated.contributionType === "PAID",
-        salary: hydrated.salary,
+        birthDate: hydrated.employeeProfile?.birthDate?.toISOString() ?? null,
+        receivesSalary: hydrated.employeeEmployment?.contributionType === "PAID",
+        salary: hydrated.employeeEmployment?.salary ?? 0,
         branchIds,
       },
     });

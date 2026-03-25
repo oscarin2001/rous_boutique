@@ -7,7 +7,7 @@ import { getSession } from "@/lib/session";
 
 export async function getBranchManagers(): Promise<BranchManagerOption[]> {
   const session = await getSession();
-  if (!session) return [];
+  if (!session || session.roleCode !== "SUPERADMIN") return [];
 
   const managers = await prisma.employee.findMany({
     where: {

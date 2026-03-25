@@ -251,32 +251,13 @@ model Employee {
   roleId   Int
   branchId Int? // Primary branch assignment
 
-  // Personal data
+  // Core identity
   firstName String
   lastName  String
   ci        String    @unique // Cédula de Identidad (Bolivia)
   phone     String?
-  birthDate DateTime?
-  profession String?
-  aboutMe    String?
-  skills     String?
-  languages  String?
-  photoUrl   String?
-
-  // Employment data
-  salary           Decimal          @default(0)
-  hireDate         DateTime         @default(now())
-  contractEndAt    DateTime?
-  contractType     ContractType     @default(INDEFINITE)
-  contributionType ContributionType @default(NONE)
-  status           EmployeeStatus   @default(ACTIVE)
-  homeAddress      String?
-  deletedAt        DateTime?
-
-  // Preferences
-  theme         Theme   @default(SYSTEM)
-  notifications Boolean @default(true)
-  language      String  @default("es")
+  status    EmployeeStatus @default(ACTIVE)
+  deletedAt DateTime?
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime? @updatedAt
@@ -297,6 +278,13 @@ model Employee {
   // Multi-branch assignment
   employeeBranches EmployeeBranch[]
 
+  // Separated concerns
+  employeeProfile    EmployeeProfile?
+  employeeEmployment EmployeeEmployment?
+  employeeSettings   EmployeeSettings?
+  employeeSkills     EmployeeSkill[]
+  employeeLanguages  EmployeeLanguage[]
+
   // Business relations
   cashSessions        CashSession[]
   salesMade           Order[]           @relation("SellerRelation")
@@ -315,12 +303,44 @@ model Employee {
   supplierPayments    SupplierPayment[]
   supplierManagers    SupplierManager[]
   warehouseManagers   WarehouseManager[]
-  employeeSettings    EmployeeSettings?
+}
+
+model EmployeeProfile {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @unique
+  birthDate  DateTime?
+  profession String?
+  aboutMe    String?
+  photoUrl   String?
+  homeAddress String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model EmployeeEmployment {
+  id               Int               @id @default(autoincrement())
+  employeeId       Int               @unique
+  salary           Decimal           @default(0)
+  hireDate         DateTime          @default(now())
+  contractEndAt    DateTime?
+  contractType     ContractType      @default(INDEFINITE)
+  contributionType ContributionType  @default(NONE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
 model EmployeeSettings {
   id                    Int       @id @default(autoincrement())
   employeeId            Int       @unique
+  theme                 Theme     @default(SYSTEM)
+  language              String    @default("es")
+  notifications         Boolean   @default(true)
   timezone              String    @default("America/La_Paz")
   dateFormat            String    @default("DD/MM/YYYY")
   timeFormat            String    @default("24h")
@@ -343,6 +363,30 @@ model EmployeeSettings {
   updatedAt             DateTime? @updatedAt
 
   employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+model EmployeeSkill {
+  id         Int      @id @default(autoincrement())
+  employeeId Int
+  name       String
+  level      String?
+  createdAt  DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+}
+
+model EmployeeLanguage {
+  id         Int      @id @default(autoincrement())
+  employeeId Int
+  language   String
+  level      String?
+  createdAt  DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
 }
 
 model AuthSession {
@@ -392,7 +436,7 @@ model Customer {
   addresses    Address[]
   reviews      Review[]
   reservations Reservation[]
-  cartItems    CartItem[]
+  carts        Cart[]
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -490,14 +534,14 @@ model WarehouseBranch {
 }
 
 model BranchHour {
-  id          Int       @id @default(autoincrement())
-  branchId    Int
-  dayOfWeek   Int       // 0=Sunday … 6=Saturday
-  openingTime String?   // "09:00"
-  closingTime String?   // "18:00"
-  isClosed    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime?
+  id              Int       @id @default(autoincrement())
+  branchId        Int
+  dayOfWeek       Int       // 0=Sunday … 6=Saturday
+  openingMinutes  Int?      // Minutes from midnight, e.g. 540 for 09:00
+  closingMinutes  Int?      // Minutes from midnight, e.g. 1080 for 18:00
+  isClosed        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
 
   branch Branch @relation(fields: [branchId], references: [id])
 
@@ -509,13 +553,15 @@ model BranchSpecialDay {
   branchId    Int
   date        DateTime
   isClosed    Boolean   @default(false)
-  openingTime String?
-  closingTime String?
+  openingMinutes Int?   // Minutes from midnight, e.g. 540 for 09:00
+  closingMinutes Int?   // Minutes from midnight, e.g. 1080 for 18:00
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime?
 
   branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([branchId, date])
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -564,12 +610,12 @@ model PushSubscription {
 model Attendance {
   id         Int        @id @default(autoincrement())
   employeeId Int
-  date       String
+  date       DateTime
   checkIn    DateTime
   checkOut   DateTime?
   device     DeviceType
   createdAt  DateTime   @default(now())
-  updatedAt  DateTime
+  updatedAt  DateTime?  @updatedAt
 
   employee Employee @relation(fields: [employeeId], references: [id])
 }
@@ -579,8 +625,8 @@ model ShiftSchedule {
   employeeId Int
   branchId   Int
   date       DateTime
-  startTime  String    // "08:00"
-  endTime    String    // "14:00"
+  startTime  DateTime  // Full datetime for shift start
+  endTime    DateTime  // Full datetime for shift end
   shiftType  ShiftType @default(NORMAL)
   isHoliday  Boolean   @default(false)
   notes      String?
@@ -590,7 +636,7 @@ model ShiftSchedule {
   employee Employee @relation(fields: [employeeId], references: [id])
   branch   Branch   @relation(fields: [branchId], references: [id])
 
-  @@unique([employeeId, date])
+  @@unique([employeeId, date, startTime])
 }
 
 model Payroll {
@@ -895,7 +941,8 @@ model CashSession {
   expenses  Expense[]
   actions   CashSessionAction[]
 
-  // Enforce max one OPEN session per branch at application level
+  // Unique partial index: only one OPEN session per branch
+  // Enforced by migration: CREATE UNIQUE INDEX cashsession_one_open_per_branch ON "CashSession" ("branchId") WHERE "status" = 'OPEN'
   @@index([branchId, status])
 }
 
@@ -961,11 +1008,10 @@ model Order {
   shippingTotal Decimal @default(0)
   discount      Decimal @default(0)
   grandTotal    Decimal @default(0)
+  paidTotal     Decimal @default(0) // Derived from payments, updated in transaction for read speed
 
   // Status
   status        OrderStatus    @default(PENDING)
-  isPaid        Boolean        @default(false)
-  paymentMethod PaymentMethod?
 
   // Logistics
   isDelivery     Boolean         @default(false)
@@ -1111,20 +1157,29 @@ model Reservation {
   updatedBy       Employee?      @relation("ReservationUpdatedBy", fields: [updatedById], references: [id])
 }
 
-model CartItem {
+model Cart {
   id         Int       @id @default(autoincrement())
-  customerId Int
-  variantId  Int
-  quantity   Int       @default(1)
-  createdAt  DateTime  @default(now())
-  guestToken String?
+  customerId Int?
+  guestToken String?   @unique
   expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
 
-  customer Customer       @relation(fields: [customerId], references: [id])
-  variant  ProductVariant @relation(fields: [variantId], references: [id])
+  customer Customer?  @relation(fields: [customerId], references: [id])
+  items    CartItem[]
+}
 
-  @@unique([customerId, variantId])
-  @@index([customerId, createdAt])
+model CartItem {
+  id        Int       @id @default(autoincrement())
+  cartId    Int
+  variantId Int
+  quantity  Int       @default(1)
+  createdAt DateTime  @default(now())
+
+  cart    Cart            @relation(fields: [cartId], references: [id])
+  variant ProductVariant  @relation(fields: [variantId], references: [id])
+
+  @@unique([cartId, variantId])
 }
 
 // ═══════════════════════════════════════════════════════════════

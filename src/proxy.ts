@@ -25,7 +25,12 @@ export async function proxy(request: NextRequest) {
     }
 
     try {
-      await jwtVerify(token, SECRET);
+      const { payload } = await jwtVerify(token, SECRET);
+      if ((payload as { roleCode?: string }).roleCode !== "SUPERADMIN") {
+        const response = NextResponse.redirect(new URL("/super-admin", request.url));
+        response.cookies.delete(COOKIE_NAME);
+        return response;
+      }
       return NextResponse.next();
     } catch {
       const response = NextResponse.redirect(new URL("/super-admin", request.url));

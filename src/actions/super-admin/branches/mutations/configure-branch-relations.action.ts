@@ -26,7 +26,7 @@ export async function configureBranchRelations(
   data: ConfigureInput
 ): Promise<BranchActionResult> {
   const session = await getSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  if (!session || session.roleCode !== "SUPERADMIN") return { success: false, error: "No autorizado" };
 
   const validPassword = await verifySessionPassword(session, data.confirmPassword);
   if (!validPassword) {

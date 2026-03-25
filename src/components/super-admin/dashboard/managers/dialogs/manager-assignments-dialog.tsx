@@ -50,6 +50,7 @@ export function ManagerAssignmentsDialog({ open, onOpenChange, manager, branchOp
 
   const handleSave = async () => {
     if (!manager) return;
+    if (!branchOptions.length) return setMessage("No hay sucursales disponibles para asignar.");
     if (!branchIds.length) return setMessage(ADMIN_VALIDATION_MESSAGES.branchRequired);
     if (confirmName.trim().toLowerCase() !== manager.fullName.toLowerCase()) return setMessage("Debes escribir exactamente el nombre del encargado.");
     if (!confirmPassword.trim()) return setMessage(ADMIN_VALIDATION_MESSAGES.adminPasswordRequired);
@@ -69,7 +70,10 @@ export function ManagerAssignmentsDialog({ open, onOpenChange, manager, branchOp
         <div className="space-y-2 rounded-lg border p-3">
           <Label className="text-sm">Sucursales</Label>
           <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
-            {branchOptions.map((branch) => {
+            {branchOptions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay sucursales disponibles para asignar.</p>
+            ) : (
+              branchOptions.map((branch) => {
               const isChecked = selectedSet.has(branch.id);
               const isDisabled = !currentSet.has(branch.id) && branch.assignedManagerCount >= MAX_MANAGERS_PER_BRANCH;
               const id = `manager-assign-${branch.id}`;
@@ -79,7 +83,8 @@ export function ManagerAssignmentsDialog({ open, onOpenChange, manager, branchOp
                   <span className="text-sm">{branch.name} ({branch.city})</span>
                 </label>
               );
-            })}
+              })
+            )}
           </div>
         </div>
 

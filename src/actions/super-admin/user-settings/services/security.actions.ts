@@ -119,9 +119,10 @@ export async function createSuperAdminAccountAction(input: CreateSuperAdminAccou
   const created = await prisma.$transaction(async (tx) => {
     const auth = await tx.auth.create({ data: { username: parsed.data.username, password: passwordHash, accountType: "EMPLOYEE", isActive: true } });
     const employee = await tx.employee.create({
-      data: { authId: auth.id, roleId: role.id, firstName: parsed.data.firstName, lastName: parsed.data.lastName, birthDate, phone: parsed.data.phone || null, ci: parsed.data.ci, status: "ACTIVE", createdById: session.employeeId },
+      data: { authId: auth.id, roleId: role.id, firstName: parsed.data.firstName, lastName: parsed.data.lastName, phone: parsed.data.phone || null, ci: parsed.data.ci, status: "ACTIVE", createdById: session.employeeId },
       select: { id: true, firstName: true, lastName: true },
     });
+    await tx.employeeProfile.create({ data: { employeeId: employee.id, birthDate } });
     await tx.employeeSettings.create({ data: { employeeId: employee.id } });
     await tx.auditLog.create({ data: { entity: "SuperAdminAccount", entityId: employee.id, action: "CREATE", employeeId: session.employeeId, newValue: JSON.stringify({ username: parsed.data.username, fullName: `${employee.firstName} ${employee.lastName}` }) } });
     return employee;
