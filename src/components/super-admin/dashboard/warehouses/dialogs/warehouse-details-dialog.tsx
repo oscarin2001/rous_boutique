@@ -2,8 +2,10 @@ import { Eye } from "lucide-react";
 
 import type { WarehouseRow } from "@/actions/super-admin/warehouses/types";
 
+
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 interface Props {
   row: WarehouseRow | null;
@@ -14,6 +16,15 @@ interface Props {
 export function WarehouseDetailsDialog({ row, open, onOpenChange }: Props) {
   if (!row) return null;
 
+  function fmtDate(date: string | null) {
+    if (!date) return "-";
+    return new Intl.DateTimeFormat("es-BO", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(date));
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sa-modal-wide">
@@ -23,20 +34,41 @@ export function WarehouseDetailsDialog({ row, open, onOpenChange }: Props) {
             Detalle de Bodega
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 text-sm">
-          <p><strong>Nombre:</strong> {row.name}</p>
-          <p><strong>Telefono:</strong> {row.phone || "Sin telefono"}</p>
-          <p><strong>Direccion:</strong> {row.address}</p>
-          <p><strong>Ciudad:</strong> {row.city}</p>
-          <p><strong>Departamento:</strong> {row.department || "Sin dato"}</p>
-          <p><strong>Pais:</strong> {row.country}</p>
-          <p><strong>Creado por:</strong> {row.createdByName || "No disponible"}</p>
-          <p><strong>Creado el:</strong> {row.createdAt ? new Date(row.createdAt).toLocaleDateString("es-BO") : "Sin fecha"}</p>
-          <p><strong>Actualizado por:</strong> {row.updatedByName || "No disponible"}</p>
-          <p><strong>Actualizado el:</strong> {row.updatedAt ? new Date(row.updatedAt).toLocaleDateString("es-BO") : "Sin fecha"}</p>
-          <div><strong>Sucursales:</strong><div className="mt-1 flex flex-wrap gap-1">{row.branches.length ? row.branches.map((b) => <Badge key={b.id} variant="outline">{b.name}</Badge>) : <span className="text-muted-foreground">Sin asignacion</span>}</div></div>
-          <div><strong>Encargados:</strong><div className="mt-1 flex flex-wrap gap-1">{row.managers.length ? row.managers.map((m) => <Badge key={m.id} variant="secondary">{m.fullName}</Badge>) : <span className="text-muted-foreground">Sin asignacion</span>}</div></div>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Campo</TableHead>
+              <TableHead>Valor</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[
+              { label: "Nombre", value: row.name },
+              { label: "Telefono", value: row.phone || "Sin telefono" },
+              { label: "Direccion", value: row.address },
+              { label: "Ciudad", value: row.city },
+              { label: "Departamento", value: row.department || "Sin dato" },
+              { label: "Pais", value: row.country },
+              { label: "Creado por", value: row.createdByName || "No disponible" },
+              { label: "Creado el", value: fmtDate(row.createdAt) },
+              { label: "Actualizado por", value: row.updatedByName || "No disponible" },
+              { label: "Actualizado el", value: fmtDate(row.updatedAt) },
+              { label: "Sucursales", value: row.branches.length
+                ? <div className="flex flex-wrap gap-1">{row.branches.map((b) => <Badge key={b.id} variant="outline">{b.name}</Badge>)}</div>
+                : <span className="text-muted-foreground">Sin asignacion</span> },
+              { label: "Encargados", value: row.managers.length
+                ? <div className="flex flex-wrap gap-1">{row.managers.map((m) => <Badge key={m.id} variant="secondary">{m.fullName}</Badge>)}</div>
+                : <span className="text-muted-foreground">Sin asignacion</span> },
+            ]
+              .sort((a, b) => a.label.localeCompare(b.label, "es"))
+              .map((row) => (
+                <TableRow key={row.label}>
+                  <TableCell className="font-medium text-sm text-muted-foreground">{row.label}</TableCell>
+                  <TableCell className="text-sm">{row.value}</TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
       </DialogContent>
     </Dialog>
   );
