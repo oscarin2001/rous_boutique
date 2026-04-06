@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDown, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-import { InfoHint } from "../components";
 import type { SessionRow } from "../core";
 
 type Props = {
@@ -17,46 +16,115 @@ type Props = {
 };
 
 export function AccountSecurityTab({ sessions, isPending, onRevokeOther }: Props) {
-  const [isActionsOpen, setIsActionsOpen] = useState(true);
-  const [isSessionsOpen, setIsSessionsOpen] = useState(true);
+  // Estado para controlar qué sección está abierta (solo una a la vez)
+  const [openSection, setOpenSection] = useState<"actions" | "sessions" | null>(null);
+
+  const toggleSection = (section: "actions" | "sessions") => {
+    setOpenSection(openSection === section ? null : section);
+  };
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-card/80 p-4 shadow-sm ring-1 ring-border/40">
-        <div className="flex items-center gap-1 text-sm font-semibold">
-          Seguridad de cuenta
-          <InfoHint text="Sesiones activas, dispositivos recientes y cierre remoto de sesiones." />
+      {/* Header principal */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+          <Shield className="size-5 text-foreground" />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold">Seguridad de la Cuenta</h2>
+          <p className="text-sm text-muted-foreground">
+            Gestiona sesiones activas y acciones de seguridad
+          </p>
         </div>
       </div>
 
-      <Collapsible open={isActionsOpen} onOpenChange={setIsActionsOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
-          <p className="text-sm font-semibold">Acciones de seguridad</p>
-          <ChevronDownIcon className={`size-4 text-muted-foreground transition-transform ${isActionsOpen ? "rotate-180" : ""}`} />
+      {/* Acciones de Seguridad */}
+      <Collapsible
+        open={openSection === "actions"}
+        onOpenChange={() => toggleSection("actions")}
+        className="rounded-xl border bg-card"
+      >
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-muted/50 transition-colors">
+          <h3 className="font-medium">Acciones de seguridad</h3>
+          <ChevronDown
+            className={`size-4 text-muted-foreground transition-transform duration-200 ${
+              openSection === "actions" ? "rotate-180" : ""
+            }`}
+          />
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-3 border-t p-4">
-          <p className="text-xs text-muted-foreground">Se pedira confirmacion con contrasena para cerrar sesiones en otros dispositivos.</p>
-          <div className="flex items-center justify-end">
-            <Button type="button" variant="outline" onClick={onRevokeOther} disabled={isPending}>
-              Cerrar otras sesiones
-            </Button>
+
+        <CollapsibleContent className="px-5 pb-6">
+          <div className="space-y-4 pt-1">
+            <p className="text-sm text-muted-foreground">
+              Se pedirá confirmación con tu contraseña para cerrar sesiones en otros dispositivos.
+            </p>
+
+            <div className="flex justify-end">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onRevokeOther} 
+                disabled={isPending}
+              >
+                Cerrar todas las demás sesiones
+              </Button>
+            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>
 
-      <Collapsible open={isSessionsOpen} onOpenChange={setIsSessionsOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
-          <p className="text-sm font-semibold">Sesiones registradas</p>
-          <ChevronDownIcon className={`size-4 text-muted-foreground transition-transform ${isSessionsOpen ? "rotate-180" : ""}`} />
+      {/* Sesiones Registradas */}
+      <Collapsible
+        open={openSection === "sessions"}
+        onOpenChange={() => toggleSection("sessions")}
+        className="rounded-xl border bg-card"
+      >
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-muted/50 transition-colors">
+          <h3 className="font-medium">Sesiones registradas</h3>
+          <ChevronDown
+            className={`size-4 text-muted-foreground transition-transform duration-200 ${
+              openSection === "sessions" ? "rotate-180" : ""
+            }`}
+          />
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-2 border-t p-4">
-          {sessions.map((item) => (
-            <div key={item.sessionId} className="rounded-md border p-2 text-xs">
-              <p className="font-medium">{item.isCurrent ? "Sesion actual" : "Sesion registrada"} - {item.browser ?? "Navegador"} / {item.os ?? "SO"}</p>
-              <p className="text-muted-foreground">IP: {item.ipAddress ?? "Sin IP"} - Ultima actividad: {new Date(item.lastSeenAt).toLocaleString("es-BO")}</p>
-            </div>
-          ))}
-          {!sessions.length ? <p className="text-xs text-muted-foreground">No hay sesiones recientes.</p> : null}
+
+        <CollapsibleContent className="px-5 pb-6">
+          <div className="space-y-3 pt-1">
+            {sessions.length > 0 ? (
+              sessions.map((item) => (
+                <div 
+                  key={item.sessionId} 
+                  className="rounded-lg border p-4 text-sm"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium">
+                        {item.isCurrent ? "Sesión actual" : "Sesión registrada"}
+                      </p>
+                      <p className="text-muted-foreground mt-1">
+                        {item.browser ?? "Navegador desconocido"} • {item.os ?? "Sistema operativo"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-xs text-muted-foreground grid grid-cols-1 sm:grid-cols-2 gap-y-1">
+                    <p>IP: <span className="font-mono">{item.ipAddress ?? "Sin información"}</span></p>
+                    <p>
+                      Última actividad:{" "}
+                      {new Date(item.lastSeenAt).toLocaleString("es-BO", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed p-8 text-center">
+                <p className="text-muted-foreground">No hay sesiones registradas recientemente.</p>
+              </div>
+            )}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </div>

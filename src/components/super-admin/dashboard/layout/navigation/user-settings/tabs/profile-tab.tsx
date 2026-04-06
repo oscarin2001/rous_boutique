@@ -2,17 +2,18 @@
 
 import { type ChangeEvent, useRef, useState } from "react";
 
-import { ChevronDownIcon } from "lucide-react";
+import { Camera, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { uploadSuperAdminProfilePhotoAction } from "@/actions/super-admin/user-settings/actions";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
 import { InfoHint } from "../components";
@@ -43,154 +44,353 @@ export function ProfileTab({
   setProfileErrors,
   onSave,
 }: Props) {
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [isEditProfileOpen, setIsEditProfileOpen] = useState(true);
-  const [isProfessionalSummaryOpen, setIsProfessionalSummaryOpen] = useState(false);
-  const [isCredentialsOpen, setIsCredentialsOpen] = useState(false);
 
-  const clear = (key: keyof ProfileFieldErrors) => setProfileErrors((v) => ({ ...v, [key]: undefined }));
+  const clearError = (key: keyof ProfileFieldErrors) =>
+    setProfileErrors((prev) => ({ ...prev, [key]: undefined }));
 
-  const cancelCredentialEdition = () => {
-    setProfile((v) => ({ ...v, username: v.initialUsername, newPassword: "", newPasswordConfirm: "" }));
-    setIsEditingCredentials(false);
-  };
-
-  const handlePhotoFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploadingPhoto(true);
     const result = await uploadSuperAdminProfilePhotoAction(file);
     setIsUploadingPhoto(false);
+    e.target.value = "";
 
     if (!result.success || !result.data) {
-      toast.error(result.error ?? "No se pudo subir la foto");
-      event.target.value = "";
+      toast.error(result.error ?? "No se pudo subir la foto de perfil");
       return;
     }
 
     setProfile((prev) => ({ ...prev, photoUrl: result.data.photoUrl }));
-    clear("photoUrl");
-    toast.success("Foto subida correctamente");
-    event.target.value = "";
+    clearError("photoUrl");
+    toast.success("Foto de perfil actualizada correctamente");
   };
 
-  const triggerIconClass = (open: boolean) => `size-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`;
-
-  const hasIdentityChanges =
+  const hasChanges = 
     profile.firstName !== profileSnapshot.firstName ||
     profile.lastName !== profileSnapshot.lastName ||
     profile.birthDate !== profileSnapshot.birthDate ||
     profile.phone !== profileSnapshot.phone ||
     profile.ci !== profileSnapshot.ci ||
     profile.profession !== profileSnapshot.profession ||
-    profile.photoUrl !== profileSnapshot.photoUrl;
-
-  const hasSummaryChanges =
     profile.aboutMe !== profileSnapshot.aboutMe ||
     profile.skills !== profileSnapshot.skills ||
-    profile.languages !== profileSnapshot.languages;
-
-  const hasCredentialChanges =
+    profile.languages !== profileSnapshot.languages ||
     profile.username !== profileSnapshot.username ||
     Boolean(profile.newPassword) ||
-    Boolean(profile.newPasswordConfirm);
+    Boolean(profile.newPasswordConfirm) ||
+    profile.photoUrl !== profileSnapshot.photoUrl;
+
+  const displayName = `${profile.firstName} ${profile.lastName}`.trim() || "Super Admin";
 
   return (
-    <div className="space-y-4">
-      <Collapsible open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-start justify-between gap-3 p-4 text-left">
+    <div className="space-y-10">
+      {/* Sección: Información Personal */}
+      <div>
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-sm font-semibold">{isEditable ? "Editar perfil" : "Ver mi perfil"}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Gestiona identidad del superadmin y credenciales de acceso con confirmacion segura.</p>
+            <h2 className="text-xl font-semibold tracking-tight">Información Personal</h2>
+            <p className="text-sm text-muted-foreground">Datos de identidad y contacto</p>
           </div>
-          <ChevronDownIcon className={triggerIconClass(isEditProfileOpen)} />
-        </CollapsibleTrigger>
+          {isEditable && hasChanges && (
+            <Button onClick={onSave} disabled={isPending} className="gap-2">
+              <Save className="size-4" />
+              Guardar cambios
+            </Button>
+          )}
+        </div>
 
-        <CollapsibleContent className="grid gap-3 border-t px-4 py-4 sm:grid-cols-2">
-          <p className="sm:col-span-2 flex items-center gap-1 text-xs text-muted-foreground">
-            Estos datos actualizan nombre, apellido, CI, telefono y fecha de nacimiento usados en perfil y auditoria.
-            <InfoHint text="Estos datos actualizan nombre, apellido, CI, telefono y fecha de nacimiento usados en perfil y auditoria." />
-          </p>
-          <div><Label htmlFor="firstName">Nombre</Label><Input id="firstName" disabled={!isEditable} value={profile.firstName} onChange={(e) => { setProfile((v) => ({ ...v, firstName: e.target.value })); clear("firstName"); }} />{profileErrors.firstName ? <p className="mt-1 text-xs text-destructive">{profileErrors.firstName}</p> : null}</div>
-          <div><Label htmlFor="lastName">Apellido</Label><Input id="lastName" disabled={!isEditable} value={profile.lastName} onChange={(e) => { setProfile((v) => ({ ...v, lastName: e.target.value })); clear("lastName"); }} />{profileErrors.lastName ? <p className="mt-1 text-xs text-destructive">{profileErrors.lastName}</p> : null}</div>
-          <div><Label htmlFor="birthDate">Fecha de nacimiento</Label><DateInput id="birthDate" disabled={!isEditable} max={new Date().toISOString().slice(0, 10)} value={profile.birthDate} onValueChange={(value) => { setProfile((v) => ({ ...v, birthDate: value })); clear("birthDate"); }} />{profileErrors.birthDate ? <p className="mt-1 text-xs text-destructive">{profileErrors.birthDate}</p> : null}</div>
-          <div><Label htmlFor="phone">Telefono</Label><Input id="phone" disabled={!isEditable} value={profile.phone} onChange={(e) => { setProfile((v) => ({ ...v, phone: e.target.value.replace(/\D/g, "").slice(0, 8) })); clear("phone"); }} />{profileErrors.phone ? <p className="mt-1 text-xs text-destructive">{profileErrors.phone}</p> : null}</div>
-          <div><Label htmlFor="ci">CI</Label><Input id="ci" disabled={!isEditable} value={profile.ci} onChange={(e) => { setProfile((v) => ({ ...v, ci: e.target.value.slice(0, 20) })); clear("ci"); }} />{profileErrors.ci ? <p className="mt-1 text-xs text-destructive">{profileErrors.ci}</p> : null}</div>
-          <div><Label htmlFor="profession">Profesion</Label><Input id="profession" disabled={!isEditable} value={profile.profession} onChange={(e) => { setProfile((v) => ({ ...v, profession: e.target.value.slice(0, 80) })); clear("profession"); }} />{profileErrors.profession ? <p className="mt-1 text-xs text-destructive">{profileErrors.profession}</p> : null}</div>
-          <div className="sm:col-span-2 space-y-2">
-            <Label htmlFor="photoUrl">Foto</Label>
-            <Input id="photoUrl" disabled={!isEditable} value={profile.photoUrl} placeholder="https://... o /uploads/employees/foto.jpg" onChange={(e) => { setProfile((v) => ({ ...v, photoUrl: e.target.value.slice(0, 300) })); clear("photoUrl"); }} />
-            <div className="flex flex-wrap items-center gap-2">
-              <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handlePhotoFile} />
-              <Button type="button" variant="outline" size="sm" disabled={!isEditable || isUploadingPhoto} onClick={() => photoInputRef.current?.click()}>
-                {isUploadingPhoto ? "Subiendo foto..." : "Subir archivo"}
+        <div className="rounded-2xl border bg-card p-8">
+          {/* Foto de perfil */}
+          <div className="flex flex-col items-center gap-4 mb-10">
+            <div className="relative group">
+              <Avatar className="h-28 w-28 border-4 border-background shadow-md">
+                <AvatarImage src={profile.photoUrl} alt={displayName} />
+                <AvatarFallback className="text-4xl font-medium bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
+                  {profile.firstName?.[0]}{profile.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+
+              {isEditable && (
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90 transition-colors"
+                  disabled={isUploadingPhoto}
+                >
+                  <Camera className="size-4" />
+                </button>
+              )}
+            </div>
+
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={handlePhotoUpload}
+            />
+
+            <div className="text-center">
+              <p className="font-medium">{displayName}</p>
+              <p className="text-sm text-muted-foreground">{profile.profession || "Super Admin"}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">Nombre</Label>
+              <Input
+                id="firstName"
+                value={profile.firstName}
+                disabled={!isEditable}
+                onChange={(e) => {
+                  setProfile((v) => ({ ...v, firstName: e.target.value }));
+                  clearError("firstName");
+                }}
+              />
+              {profileErrors.firstName && (
+                <p className="text-xs text-destructive">{profileErrors.firstName}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Apellido</Label>
+              <Input
+                id="lastName"
+                value={profile.lastName}
+                disabled={!isEditable}
+                onChange={(e) => {
+                  setProfile((v) => ({ ...v, lastName: e.target.value }));
+                  clearError("lastName");
+                }}
+              />
+              {profileErrors.lastName && (
+                <p className="text-xs text-destructive">{profileErrors.lastName}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birthDate">Fecha de nacimiento</Label>
+              <DateInput
+                id="birthDate"
+                value={profile.birthDate}
+                disabled={!isEditable}
+                max={new Date().toISOString().slice(0, 10)}
+                onValueChange={(value) => {
+                  setProfile((v) => ({ ...v, birthDate: value }));
+                  clearError("birthDate");
+                }}
+              />
+              {profileErrors.birthDate && (
+                <p className="text-xs text-destructive">{profileErrors.birthDate}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Teléfono</Label>
+              <Input
+                id="phone"
+                value={profile.phone}
+                disabled={!isEditable}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "").slice(0, 8);
+                  setProfile((v) => ({ ...v, phone: value }));
+                  clearError("phone");
+                }}
+              />
+              {profileErrors.phone && (
+                <p className="text-xs text-destructive">{profileErrors.phone}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ci">Cédula de identidad</Label>
+              <Input
+                id="ci"
+                value={profile.ci}
+                disabled={!isEditable}
+                onChange={(e) => {
+                  setProfile((v) => ({ ...v, ci: e.target.value.slice(0, 20) }));
+                  clearError("ci");
+                }}
+              />
+              {profileErrors.ci && (
+                <p className="text-xs text-destructive">{profileErrors.ci}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="profession">Profesión / Cargo</Label>
+              <Input
+                id="profession"
+                value={profile.profession}
+                disabled={!isEditable}
+                onChange={(e) => {
+                  setProfile((v) => ({ ...v, profession: e.target.value.slice(0, 80) }));
+                  clearError("profession");
+                }}
+              />
+              {profileErrors.profession && (
+                <p className="text-xs text-destructive">{profileErrors.profession}</p>
+              )}
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="lastLogin">Último acceso</Label>
+              <Input
+                value={profile.lastLogin ? new Date(profile.lastLogin).toLocaleString("es-BO") : "Sin registro"}
+                disabled
+                readOnly
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sección: Resumen Profesional */}
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight mb-6">Resumen Profesional</h2>
+        <div className="rounded-2xl border bg-card p-8 space-y-8">
+          <div className="space-y-2">
+            <Label htmlFor="aboutMe">Acerca de mí</Label>
+            <Textarea
+              id="aboutMe"
+              value={profile.aboutMe}
+              disabled={!isEditable}
+              placeholder="Describe tu experiencia y rol como Super Admin..."
+              rows={5}
+              onChange={(e) => {
+                setProfile((v) => ({ ...v, aboutMe: e.target.value.slice(0, 600) }));
+                clearError("aboutMe");
+              }}
+            />
+            {profileErrors.aboutMe && (
+              <p className="text-xs text-destructive">{profileErrors.aboutMe}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="skills">Habilidades clave</Label>
+              <Input
+                id="skills"
+                value={profile.skills}
+                disabled={!isEditable}
+                placeholder="Liderazgo:85, Inventario:78, Ventas:90"
+                onChange={(e) => {
+                  setProfile((v) => ({ ...v, skills: e.target.value.slice(0, 300) }));
+                  clearError("skills");
+                }}
+              />
+              {profileErrors.skills && (
+                <p className="text-xs text-destructive">{profileErrors.skills}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="languages">Idiomas</Label>
+              <Input
+                id="languages"
+                value={profile.languages}
+                disabled={!isEditable}
+                placeholder="Español:C2:Nativo, Inglés:B2"
+                onChange={(e) => {
+                  setProfile((v) => ({ ...v, languages: e.target.value.slice(0, 500) }));
+                  clearError("languages");
+                }}
+              />
+              {profileErrors.languages && (
+                <p className="text-xs text-destructive">{profileErrors.languages}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sección: Credenciales de Acceso */}
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight mb-6">Credenciales de Acceso</h2>
+        <div className="rounded-2xl border bg-card p-8 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Cambios en credenciales requieren confirmación con tu contraseña actual.
+              </p>
+            </div>
+            {profile.canChangeCredentials && isEditable && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingCredentials(!isEditingCredentials)}
+              >
+                {isEditingCredentials ? "Cancelar" : "Cambiar credenciales"}
               </Button>
-              <p className="text-xs text-muted-foreground">JPG, PNG o WEBP. Max 5MB.</p>
-            </div>
-            {profileErrors.photoUrl ? <p className="mt-1 text-xs text-destructive">{profileErrors.photoUrl}</p> : null}
+            )}
           </div>
-          <div>
-            <Label htmlFor="lastLogin">Ultimo acceso</Label>
-            <Input id="lastLogin" value={profile.lastLogin ? new Date(profile.lastLogin).toLocaleString("es-BO") : "Sin registro"} disabled readOnly />
-          </div>
-          {isEditable ? (
-            <div className="sm:col-span-2 flex justify-end">
-              <Button type="button" disabled={isPending || !hasIdentityChanges} onClick={onSave}>Guardar seccion</Button>
-            </div>
-          ) : null}
-        </CollapsibleContent>
-      </Collapsible>
 
-      <Collapsible open={isProfessionalSummaryOpen} onOpenChange={setIsProfessionalSummaryOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
-          <p className="text-sm font-semibold">Resumen profesional</p>
-          <ChevronDownIcon className={triggerIconClass(isProfessionalSummaryOpen)} />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="grid gap-3 border-t p-4 sm:grid-cols-2">
-          <div className="sm:col-span-2"><div className="flex items-center justify-between gap-2"><Label htmlFor="aboutMe">Acerca de mi</Label></div><Textarea id="aboutMe" disabled={!isEditable} value={profile.aboutMe} placeholder="Sin cargar" onChange={(e) => { setProfile((v) => ({ ...v, aboutMe: e.target.value.slice(0, 600) })); clear("aboutMe"); }} rows={4} /><p className="mt-1 text-xs text-muted-foreground">Completa manualmente tu descripcion profesional.</p>{profileErrors.aboutMe ? <p className="mt-1 text-xs text-destructive">{profileErrors.aboutMe}</p> : null}</div>
-          <div className="sm:col-span-2"><Label htmlFor="skills">Habilidades (max 10, ej: Liderazgo:85, Inventario:78, Ventas:90)</Label><Input id="skills" disabled={!isEditable} value={profile.skills} onChange={(e) => { setProfile((v) => ({ ...v, skills: e.target.value.slice(0, 300) })); clear("skills"); }} />{profileErrors.skills ? <p className="mt-1 text-xs text-destructive">{profileErrors.skills}</p> : null}</div>
-          <div className="sm:col-span-2"><Label htmlFor="languages">Idiomas (ej: Espanol:C2:Nativo, Ingles:B2:IELTS)</Label><Input id="languages" disabled={!isEditable} value={profile.languages} onChange={(e) => { setProfile((v) => ({ ...v, languages: e.target.value.slice(0, 500) })); clear("languages"); }} />{profileErrors.languages ? <p className="mt-1 text-xs text-destructive">{profileErrors.languages}</p> : null}</div>
-          {isEditable ? (
-            <div className="sm:col-span-2 flex justify-end">
-              <Button type="button" disabled={isPending || !hasSummaryChanges} onClick={onSave}>Guardar seccion</Button>
-            </div>
-          ) : null}
-        </CollapsibleContent>
-      </Collapsible>
+          <Separator />
 
-      <Collapsible open={isCredentialsOpen} onOpenChange={setIsCredentialsOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
-          <p className="text-sm font-semibold">Credenciales del superadmin</p>
-          <ChevronDownIcon className={triggerIconClass(isCredentialsOpen)} />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-3 border-t p-4">
-          <p className="flex items-center gap-1 text-xs text-muted-foreground">
-            El usuario actual se muestra, pero nunca la contrasena. Solo puedes cambiar credenciales cada 3 meses.
-            <InfoHint text="El usuario actual se muestra, pero nunca la contrasena. Solo puedes cambiar credenciales cada 3 meses." />
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">Al guardar cambios de credenciales se solicitara contrasena actual para confirmar.</p>
-            {profile.canChangeCredentials && isEditable ? <Button type="button" variant="outline" size="sm" onClick={() => (isEditingCredentials ? cancelCredentialEdition() : setIsEditingCredentials(true))}>{isEditingCredentials ? "Cancelar credenciales" : "Editar credenciales"}</Button> : null}
+          <div className="space-y-2">
+            <Label>Usuario actual</Label>
+            <Input value={profile.initialUsername} disabled readOnly />
           </div>
-          <div><Label htmlFor="currentUsername">Usuario actual</Label><Input id="currentUsername" value={profile.initialUsername} disabled readOnly /><p className="mt-1 text-xs text-muted-foreground">La contrasena actual nunca se muestra por seguridad.</p></div>
-          {isEditingCredentials && profile.canChangeCredentials && isEditable ? (
-            <div className="space-y-3">
-              <div><Label htmlFor="username">Nuevo usuario</Label><Input id="username" disabled={!isEditable} value={profile.username} onChange={(e) => { setProfile((v) => ({ ...v, username: e.target.value.toLowerCase() })); clear("username"); }} />{profileErrors.username ? <p className="mt-1 text-xs text-destructive">{profileErrors.username}</p> : null}</div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div><Label htmlFor="newPassword">Nueva contrasena</Label><PasswordInput id="newPassword" disabled={!isEditable} value={profile.newPassword} onChange={(e) => { setProfile((v) => ({ ...v, newPassword: e.target.value })); clear("newPassword"); }} />{profileErrors.newPassword ? <p className="mt-1 text-xs text-destructive">{profileErrors.newPassword}</p> : null}</div>
-                <div><Label htmlFor="newPasswordConfirm">Confirmar nueva contrasena</Label><PasswordInput id="newPasswordConfirm" disabled={!isEditable} value={profile.newPasswordConfirm} onChange={(e) => { setProfile((v) => ({ ...v, newPasswordConfirm: e.target.value })); clear("newPasswordConfirm"); }} />{profileErrors.newPasswordConfirm ? <p className="mt-1 text-xs text-destructive">{profileErrors.newPasswordConfirm}</p> : null}</div>
+
+          {isEditingCredentials && profile.canChangeCredentials && isEditable && (
+            <div className="grid grid-cols-1 gap-6 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Nuevo nombre de usuario</Label>
+                <Input
+                  id="username"
+                  value={profile.username}
+                  onChange={(e) => {
+                    setProfile((v) => ({ ...v, username: e.target.value.toLowerCase() }));
+                    clearError("username");
+                  }}
+                />
+                {profileErrors.username && (
+                  <p className="text-xs text-destructive">{profileErrors.username}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nueva contraseña</Label>
+                  <PasswordInput
+                    id="newPassword"
+                    value={profile.newPassword}
+                    onChange={(e) => {
+                      setProfile((v) => ({ ...v, newPassword: e.target.value }));
+                      clearError("newPassword");
+                    }}
+                  />
+                  {profileErrors.newPassword && (
+                    <p className="text-xs text-destructive">{profileErrors.newPassword}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newPasswordConfirm">Confirmar nueva contraseña</Label>
+                  <PasswordInput
+                    id="newPasswordConfirm"
+                    value={profile.newPasswordConfirm}
+                    onChange={(e) => {
+                      setProfile((v) => ({ ...v, newPasswordConfirm: e.target.value }));
+                      clearError("newPasswordConfirm");
+                    }}
+                  />
+                  {profileErrors.newPasswordConfirm && (
+                    <p className="text-xs text-destructive">{profileErrors.newPasswordConfirm}</p>
+                  )}
+                </div>
               </div>
             </div>
-          ) : null}
-          {isEditable ? (
-            <div className="flex justify-end">
-              <Button type="button" disabled={isPending || !hasCredentialChanges} onClick={onSave}>Guardar seccion</Button>
-            </div>
-          ) : null}
-        </CollapsibleContent>
-      </Collapsible>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

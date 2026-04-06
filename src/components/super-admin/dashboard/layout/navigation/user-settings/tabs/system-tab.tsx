@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDown, Monitor, Save, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { InfoHint } from "../components";
 import { sessionTtlOptions, themeOptions, timezoneOptions } from "../core";
 import type { SystemForm } from "../core";
 
@@ -22,65 +20,274 @@ type Props = {
 };
 
 export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
-  const [isAppearanceOpen, setIsAppearanceOpen] = useState(true);
-  const [isRegionalOpen, setIsRegionalOpen] = useState(true);
-  const [isContingencyOpen, setIsContingencyOpen] = useState(false);
+  // Estado inicial: todos cerrados
+  const [openSection, setOpenSection] = useState<
+    "appearance" | "regional" | "contingency" | null
+  >(null);
+
+  const toggleSection = (section: "appearance" | "regional" | "contingency") => {
+    setOpenSection(openSection === section ? null : section);
+  };
 
   return (
     <div className="space-y-4">
-      <Collapsible open={isAppearanceOpen} onOpenChange={setIsAppearanceOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
-          <p className="text-sm font-semibold">Apariencia</p>
-          <ChevronDownIcon className={`size-4 text-muted-foreground transition-transform ${isAppearanceOpen ? "rotate-180" : ""}`} />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="border-t p-4">
-          <div className="flex items-center gap-1"><Label>Tema visual</Label><InfoHint text="Define apariencia del panel. Sistema usa el tema del dispositivo." /></div>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {themeOptions.map((option) => {
-              const Icon = option.icon;
-              const selected = system.theme === option.value;
-              return (
-                <button type="button" key={option.value} className={`rounded-md border p-3 text-sm ${selected ? "border-primary bg-primary/5" : "hover:border-primary/40"}`} onClick={() => setSystem((v) => ({ ...v, theme: option.value }))}>
-                  <Icon className="mx-auto mb-1 size-4" />{option.label}
-                </button>
-              );
-            })}
+      {/* Header */}
+      <div className="flex items-center gap-3 pb-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+          <Monitor className="size-4 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold">Configuración del Sistema</h2>
+          <p className="text-sm text-muted-foreground">
+            Gestiona la apariencia, preferencias regionales y datos de contingencia
+          </p>
+        </div>
+      </div>
+
+      {/* ACORDEÓN 1: Apariencia */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <button
+          type="button"
+          onClick={() => toggleSection("appearance")}
+          className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors active:bg-muted"
+        >
+          <h3 className="font-medium">Apariencia</h3>
+          <ChevronDown
+            className={`size-4 transition-transform duration-200 ${
+              openSection === "appearance" ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {openSection === "appearance" && (
+          <div className="px-5 pb-5 pt-1">
+            <div className="grid grid-cols-3 gap-3">
+              {themeOptions.map((option) => {
+                const Icon = option.icon;
+                const isSelected = system.theme === option.value;
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSystem((v) => ({ ...v, theme: option.value }))}
+                    className={`flex flex-col items-center justify-center rounded-lg border py-4 text-xs transition-all hover:border-primary/50 ${
+                      isSelected
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className={`mb-2 size-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+        )}
+      </div>
 
-      <Collapsible open={isRegionalOpen} onOpenChange={setIsRegionalOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
-          <p className="text-sm font-semibold">Preferencias regionales</p>
-          <ChevronDownIcon className={`size-4 text-muted-foreground transition-transform ${isRegionalOpen ? "rotate-180" : ""}`} />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="grid grid-cols-1 gap-3 border-t p-4 sm:grid-cols-2">
-          <div><div className="flex items-center gap-1"><Label>Idioma</Label><InfoHint text="Idioma de interfaz para este superadmin." /></div><Select value={system.language} onValueChange={(v) => setSystem((s) => ({ ...s, language: v as SystemForm["language"] }))}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="es">Espanol</SelectItem><SelectItem value="en">English</SelectItem><SelectItem value="pt">Portugues</SelectItem><SelectItem value="fr">Francais</SelectItem></SelectContent></Select></div>
-          <div><div className="flex items-center gap-1"><Label>Zona horaria</Label><InfoHint text="Se usa para mostrar fechas y horas operativas." /></div><Select value={system.timezone} onValueChange={(v) => setSystem((s) => ({ ...s, timezone: v ?? "America/La_Paz" }))}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent>{timezoneOptions.map((it) => <SelectItem key={it.value} value={it.value}>{it.label}</SelectItem>)}</SelectContent></Select></div>
-          <div><div className="flex items-center gap-1"><Label>Formato de fecha</Label><InfoHint text="Formato regional para fecha en vistas y reportes." /></div><Select value={system.dateFormat} onValueChange={(v) => setSystem((s) => ({ ...s, dateFormat: v as SystemForm["dateFormat"] }))}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem><SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem><SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem></SelectContent></Select></div>
-          <div><div className="flex items-center gap-1"><Label>Formato de hora</Label><InfoHint text="Define visualizacion en 12h o 24h." /></div><Select value={system.timeFormat} onValueChange={(v) => setSystem((s) => ({ ...s, timeFormat: v as SystemForm["timeFormat"] }))}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="24h">24 horas</SelectItem><SelectItem value="12h">12 horas</SelectItem></SelectContent></Select></div>
-          <div><div className="flex items-center gap-1"><Label>Moneda</Label><InfoHint text="Bloqueada temporalmente por politica financiera. Se mantiene por defecto." /></div><Select value={system.currency} disabled onValueChange={(v) => setSystem((s) => ({ ...s, currency: v as SystemForm["currency"] }))}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="BOB">BOB</SelectItem><SelectItem value="USD">USD</SelectItem><SelectItem value="EUR">EUR</SelectItem></SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Cambio de moneda deshabilitado temporalmente.</p></div>
-          <div><div className="flex items-center gap-1"><Label>Expiracion de sesion</Label><InfoHint text="Tiempo maximo de sesion para nuevos inicios de sesion." /></div><Select value={String(system.sessionTtlMinutes)} onValueChange={(v) => setSystem((s) => ({ ...s, sessionTtlMinutes: Number(v) }))}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent>{sessionTtlOptions.map((it) => <SelectItem key={it.value} value={String(it.value)}>{it.label}</SelectItem>)}</SelectContent></Select></div>
-        </CollapsibleContent>
-      </Collapsible>
+      {/* ACORDEÓN 2: Preferencias Regionales */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <button
+          type="button"
+          onClick={() => toggleSection("regional")}
+          className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors active:bg-muted"
+        >
+          <h3 className="font-medium">Preferencias Regionales</h3>
+          <ChevronDown
+            className={`size-4 transition-transform duration-200 ${
+              openSection === "regional" ? "rotate-180" : ""
+            }`}
+          />
+        </button>
 
-      <Collapsible open={isContingencyOpen} onOpenChange={setIsContingencyOpen} className="rounded-xl bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CollapsibleTrigger render={<div />} nativeButton={false} className="flex w-full items-center justify-between gap-3 p-4 text-left">
-          <p className="text-sm font-semibold">Contingencia y firma</p>
-          <ChevronDownIcon className={`size-4 text-muted-foreground transition-transform ${isContingencyOpen ? "rotate-180" : ""}`} />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="grid grid-cols-1 gap-3 border-t p-4 sm:grid-cols-2">
-          <p className="sm:col-span-2 flex items-center gap-1 text-xs text-muted-foreground">Datos de contingencia y firma operativa. <InfoHint text="Se usan para contacto de emergencia y encabezados de documentos internos." /></p>
-          <div><Label>Telefono alterno</Label><Input value={system.emergencyPhone} onChange={(e) => setSystem((v) => ({ ...v, emergencyPhone: e.target.value.replace(/\D/g, "").slice(0, 8) }))} /></div>
-          <div><Label>Contacto de emergencia</Label><Input value={system.emergencyContactName} onChange={(e) => setSystem((v) => ({ ...v, emergencyContactName: e.target.value }))} /></div>
-          <div><Label>Telefono contacto</Label><Input value={system.emergencyContactPhone} onChange={(e) => setSystem((v) => ({ ...v, emergencyContactPhone: e.target.value.replace(/\D/g, "").slice(0, 8) }))} /></div>
-          <div><Label>Nombre visible firma</Label><Input value={system.signatureDisplayName} onChange={(e) => setSystem((v) => ({ ...v, signatureDisplayName: e.target.value }))} /></div>
-          <div className="sm:col-span-2"><Label>Cargo en firma</Label><Input value={system.signatureTitle} onChange={(e) => setSystem((v) => ({ ...v, signatureTitle: e.target.value }))} /></div>
-        </CollapsibleContent>
-      </Collapsible>
+        {openSection === "regional" && (
+          <div className="px-5 pb-6 pt-1">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Idioma</Label>
+                <Select 
+                  value={system.language} 
+                  onValueChange={(v) => setSystem((s) => ({ ...s, language: v as SystemForm["language"] }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="es">Español</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="pt">Português</SelectItem>
+                    <SelectItem value="fr">Français</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-      <p className="text-xs text-muted-foreground">Al guardar, se abrira un modal para confirmar con contrasena actual.</p>
-      <Button type="button" onClick={onSave} disabled={isPending}>Guardar sistema</Button>
+              <div className="space-y-1">
+                <Label className="text-xs">Zona horaria</Label>
+                <Select 
+                  value={system.timezone} 
+                  onValueChange={(v) => setSystem((s) => ({ ...s, timezone: v ?? "America/La_Paz" }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timezoneOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Formato de fecha</Label>
+                <Select 
+                  value={system.dateFormat} 
+                  onValueChange={(v) => setSystem((s) => ({ ...s, dateFormat: v as SystemForm["dateFormat"] }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Formato de hora</Label>
+                <Select 
+                  value={system.timeFormat} 
+                  onValueChange={(v) => setSystem((s) => ({ ...s, timeFormat: v as SystemForm["timeFormat"] }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">24 horas</SelectItem>
+                    <SelectItem value="12h">12 horas (AM/PM)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Moneda</Label>
+                <Select value={system.currency} disabled>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Sesión expira en</Label>
+                <Select 
+                  value={String(system.sessionTtlMinutes)} 
+                  onValueChange={(v) => setSystem((s) => ({ ...s, sessionTtlMinutes: Number(v) }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessionTtlOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ACORDEÓN 3: Contingencia y Firma */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <button
+          type="button"
+          onClick={() => toggleSection("contingency")}
+          className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors active:bg-muted"
+        >
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="size-4 text-amber-500" />
+            <h3 className="font-medium">Contingencia y Firma</h3>
+          </div>
+          <ChevronDown
+            className={`size-4 transition-transform duration-200 ${
+              openSection === "contingency" ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {openSection === "contingency" && (
+          <div className="px-5 pb-6 pt-1">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Teléfono alterno</Label>
+                <Input
+                  value={system.emergencyPhone}
+                  onChange={(e) => setSystem((v) => ({ 
+                    ...v, 
+                    emergencyPhone: e.target.value.replace(/\D/g, "").slice(0, 8) 
+                  }))}
+                  className="h-9"
+                  placeholder="71234567"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Contacto de emergencia</Label>
+                <Input
+                  value={system.emergencyContactName}
+                  onChange={(e) => setSystem((v) => ({ ...v, emergencyContactName: e.target.value }))}
+                  className="h-9"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Teléfono emergencia</Label>
+                <Input
+                  value={system.emergencyContactPhone}
+                  onChange={(e) => setSystem((v) => ({ 
+                    ...v, 
+                    emergencyContactPhone: e.target.value.replace(/\D/g, "").slice(0, 8) 
+                  }))}
+                  className="h-9"
+                  placeholder="71234567"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre en firma</Label>
+                <Input
+                  value={system.signatureDisplayName}
+                  onChange={(e) => setSystem((v) => ({ ...v, signatureDisplayName: e.target.value }))}
+                  className="h-9"
+                />
+              </div>
+
+              <div className="space-y-1 sm:col-span-2">
+                <Label className="text-xs">Cargo en firma</Label>
+                <Input
+                  value={system.signatureTitle}
+                  onChange={(e) => setSystem((v) => ({ ...v, signatureTitle: e.target.value }))}
+                  className="h-9"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Botón Guardar */}
+      <div className="flex justify-end pt-4">
+        <Button onClick={onSave} disabled={isPending} size="sm" className="gap-2 min-w-[140px]">
+          <Save className="size-4" />
+          Guardar cambios
+        </Button>
+      </div>
     </div>
   );
 }

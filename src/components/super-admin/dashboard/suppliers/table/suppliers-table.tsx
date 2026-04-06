@@ -1,24 +1,15 @@
 "use client";
 
-import { 
-  MoreHorizontal, 
-  Pencil, 
-  Trash, 
-  Eye, 
-  History,
-  CheckCircle2, 
-  XCircle,
-  Users,
-} from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Eye, History, CheckCircle2, XCircle, Users } from "lucide-react";
 
 import type { SupplierRow } from "@/actions/super-admin/suppliers/types";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -33,7 +24,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-
 interface Props {
   suppliers: SupplierRow[];
   onEdit: (supplier: SupplierRow) => void;
@@ -43,8 +33,6 @@ interface Props {
   onToggleStatus: (supplier: SupplierRow) => void;
   onViewDetails: (supplier: SupplierRow) => void;
 }
-
-
 
 export function SuppliersTable({
   suppliers,
@@ -57,84 +45,175 @@ export function SuppliersTable({
 }: Props) {
   if (suppliers.length === 0) {
     return (
-      <div className="rounded-lg border border-border/20 bg-card/60 p-8 text-center">
-        <Users className="mx-auto mb-4 size-12 text-muted-foreground/50" />
-        <h3 className="mb-1 text-lg font-medium">No hay proveedores</h3>
-        <p className="text-sm text-muted-foreground">Crea tu primer proveedor para comenzar.</p>
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/50 py-16">
+        <div className="rounded-full bg-muted/50 p-4">
+          <Users className="size-12 text-muted-foreground/60" />
+        </div>
+        <h3 className="mt-6 text-xl font-semibold">No hay proveedores registrados</h3>
+        <p className="mt-2 max-w-sm text-center text-muted-foreground">
+          Comienza agregando tus aliados comerciales para gestionar compras y asignaciones.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg bg-card/70 shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Proveedor</TableHead>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[280px]">Proveedor</TableHead>
             <TableHead>Contacto</TableHead>
-            <TableHead>Ciudad</TableHead>
+            <TableHead>Ciudad / País</TableHead>
             <TableHead>Sucursales</TableHead>
-            <TableHead>Compras / Total</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead className="w-[70px]"></TableHead>
+            <TableHead className="text-right">Compras</TableHead>
+            <TableHead className="text-center">Estado</TableHead>
+            <TableHead className="w-[60px]"></TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
-          {suppliers.map((s) => (
-            <TableRow key={s.id}>
+          {suppliers.map((supplier) => (
+            <TableRow key={supplier.id} className="group hover:bg-muted/50 transition-colors">
+              {/* Proveedor */}
               <TableCell>
-                <div className="flex flex-col">
-                  <span className="font-medium">{s.fullName}</span>
-                  <span className="text-xs text-muted-foreground">{s.email || "Sin correo"}</span>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9 border">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-medium">
+                      {supplier.fullName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-foreground">{supplier.fullName}</span>
+                    <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                      {supplier.email || "Sin correo electrónico"}
+                    </span>
+                  </div>
                 </div>
               </TableCell>
-              <TableCell>{s.phone || "-"}</TableCell>
-              <TableCell>{s.city || s.country || "-"}</TableCell>
+
+              {/* Contacto */}
               <TableCell>
-                 <div className="flex flex-wrap gap-1">
-                  {s.branches.slice(0, 2).map((b) => (
-                    <Badge key={b.id} variant="secondary" className="text-[10px]">{b.name}</Badge>
+                <div className="text-sm">
+                  {supplier.phone ? (
+                    <span className="font-medium">{supplier.phone}</span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+              </TableCell>
+
+              {/* Ciudad */}
+              <TableCell className="text-sm">
+                {supplier.city && supplier.country
+                  ? `${supplier.city}, ${supplier.country}`
+                  : supplier.city || supplier.country || "—"}
+              </TableCell>
+
+              {/* Sucursales */}
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {supplier.branches.slice(0, 3).map((branch) => (
+                    <Badge key={branch.id} variant="secondary" className="text-xs font-normal">
+                      {branch.name}
+                    </Badge>
                   ))}
-                  {s.branches.length > 2 && <Badge variant="outline" className="text-[10px]">+{s.branches.length - 2}</Badge>}
+                  {supplier.branches.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{supplier.branches.length - 3}
+                    </Badge>
+                  )}
+                  {supplier.branches.length === 0 && (
+                    <span className="text-xs text-muted-foreground">Sin sucursales</span>
+                  )}
                 </div>
               </TableCell>
-              <TableCell>
-                <div className="flex flex-col text-xs">
-                  <span>{s.purchaseCount} compras</span>
-                  <span className="text-muted-foreground">{s.totalPurchaseAmount.toLocaleString()} BOB</span>
+
+              {/* Compras */}
+              <TableCell className="text-right">
+                <div className="flex flex-col items-end text-sm">
+                  <span className="font-medium">{supplier.purchaseCount} compras</span>
+                  <span className="text-muted-foreground font-medium">
+                    {supplier.totalPurchaseAmount.toLocaleString("es-BO")} BOB
+                  </span>
                 </div>
               </TableCell>
-              <TableCell>
-                 <Badge variant={s.isActive ? "default" : "outline"}>
-                  {s.isActive ? "Activo" : "Inactivo"}
+
+              {/* Estado */}
+              <TableCell className="text-center">
+                <Badge
+                  variant={supplier.isActive ? "default" : "secondary"}
+                  className={`font-medium ${supplier.isActive ? "bg-emerald-500 hover:bg-emerald-600" : ""}`}
+                >
+                  {supplier.isActive ? "Activo" : "Inactivo"}
                 </Badge>
               </TableCell>
+
+              {/* Acciones */}
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger
-                    render={
-                      <Button variant="ghost" className="size-8 p-0">
-                        <MoreHorizontal className="size-4" />
+                    render={(
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                    }
+                    )}
                   />
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                    </DropdownMenuGroup>
-                    <DropdownMenuItem onClick={() => onViewDetails(s)}><Eye className="mr-2 size-4" /> Ver Detalles</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(s)}><Pencil className="mr-2 size-4" /> Editar</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onHistory(s)}><History className="mr-2 size-4" /> Historial</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onManage(s)}><Eye className="mr-2 size-4" /> Gestionar asignaciones</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onToggleStatus(s)}>
-                      {s.isActive ? (
-                        <><XCircle className="mr-2 size-4 text-warning" /> Desactivar</>
+
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => onViewDetails(supplier)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Ver detalles
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(supplier)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Editar proveedor
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onHistory(supplier)}>
+                      <History className="mr-2 h-4 w-4" />
+                      Ver historial
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onManage(supplier)}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Gestionar asignaciones
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem onClick={() => onToggleStatus(supplier)}>
+                      {supplier.isActive ? (
+                        <>
+                          <XCircle className="mr-2 h-4 w-4 text-amber-500" />
+                          Desactivar
+                        </>
                       ) : (
-                        <><CheckCircle2 className="mr-2 size-4 text-success" /> Activar</>
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
+                          Activar
+                        </>
                       )}
                     </DropdownMenuItem>
+
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onDelete(s)} className="text-destructive"><Trash className="mr-2 size-4" /> Eliminar</DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      onClick={() => onDelete(supplier)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Eliminar proveedor
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
@@ -145,4 +224,3 @@ export function SuppliersTable({
     </div>
   );
 }
-

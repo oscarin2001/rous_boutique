@@ -90,7 +90,12 @@ export function DashboardToolbar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notices, setNotices] = useState<ToolbarNotice[]>([]);
   const [isSavingLanguage, setIsSavingLanguage] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const breadcrumbs = useMemo(() => buildBreadcrumbs(pathname, language), [pathname, language]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -225,7 +230,7 @@ export function DashboardToolbar() {
           <span className="sr-only">Mensajes</span>
         </Button>
         <Button variant="outline" size="icon-sm" onClick={toggleTheme}>
-            {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            {mounted && (resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />)}
             <span className="sr-only">Cambiar tema</span>
         </Button>
         <Button variant="outline" size="icon-sm" onClick={toggleFullscreen}>

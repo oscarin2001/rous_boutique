@@ -12,6 +12,14 @@ const dateSchema = z
   })
   .optional();
 
+const pastDateSchema = dateSchema.refine((val) => !val || new Date(val) <= new Date(), {
+  message: "La fecha no puede ser futura",
+});
+
+const birthDateSchema = pastDateSchema;
+const partnerSinceSchema = pastDateSchema;
+const contractEndAtSchema = dateSchema;
+
 const optionalText = (max: number) => z.string().trim().max(max, `Maximo ${max} caracteres`).optional().or(z.literal(""));
 
 const supplierSchemaBase = z.object({
@@ -46,9 +54,9 @@ const supplierSchemaBase = z.object({
   country: optionalText(50).refine((val) => !val || PLACE_NAME_REGEX.test(val), "Solo letras y separadores simples"),
   ci: z.string().trim().max(20, "Máximo 20 caracteres").regex(/^[A-Za-z0-9-]*$/, "Solo letras, numeros y guion").optional().or(z.literal("")),
   notes: optionalText(500),
-  birthDate: dateSchema,
-  partnerSince: dateSchema,
-  contractEndAt: dateSchema,
+  birthDate: birthDateSchema,
+  partnerSince: partnerSinceSchema,
+  contractEndAt: contractEndAtSchema,
   isIndefinite: z.boolean().default(false),
   isActive: z.boolean().default(true),
   branchIds: z.array(z.number()).default([]),

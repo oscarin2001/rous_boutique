@@ -85,7 +85,9 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, branchOptions
     if (data.country && !PLACE_NAME_REGEX.test(data.country)) next.country = "Solo letras y separadores simples";
 
     if (data.birthDate && !isValidIsoDate(data.birthDate)) next.birthDate = "Fecha inválida";
+    if (data.birthDate && new Date(data.birthDate) > new Date()) next.birthDate = "La fecha de nacimiento no puede ser futura";
     if (data.partnerSince && !isValidIsoDate(data.partnerSince)) next.partnerSince = "Fecha inválida";
+    if (data.partnerSince && new Date(data.partnerSince) > new Date()) next.partnerSince = "La fecha de alianza no puede ser futura";
     if (data.contractEndAt && !isValidIsoDate(data.contractEndAt)) next.contractEndAt = "Fecha inválida";
 
     if (data.isIndefinite && data.contractEndAt) next.contractEndAt = "No aplica si el contrato es indefinido";
