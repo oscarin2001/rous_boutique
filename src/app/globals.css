@@ -4,6 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --font-geist-sans: "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-geist-mono: Consolas, "Courier New", monospace;
   --background: 0 0% 97%;
   --foreground: 0 0% 10%;
   --card: 0 0% 100%;

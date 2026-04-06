@@ -72,20 +72,7 @@ export function summarizeChanges(
       to: toNames || "Ninguna",
     });
   }
-
-  const fromManagerIds = original.managers.map((m) => m.id).sort().join(",");
-  const toManagerIds = [...draft.managerIds].sort().join(",");
-  if (fromManagerIds !== toManagerIds) {
-    const toNames = draft.managerIds
-      .map((id) => managerOptions.find((m) => m.id === id)?.fullName)
-      .filter(Boolean)
-      .join(", ");
-    changes.push({
-      label: "Encargados",
-      from: original.managers.map((m) => m.fullName).join(", ") || "Ninguno",
-      to: toNames || "Ninguno",
-    });
-  }
+  // Assignments (branches/managers) are managed outside the modal now; omit from change summary
 
   return changes;
 }

@@ -32,10 +32,6 @@ export interface SupplierFormProps {
   supplier: SupplierRow | null;
   branchOptions: SupplierBranchOption[];
   managerOptions: SupplierManagerOption[];
-  selectedBranchIds: number[];
-  onSelectedBranchIdsChange: (ids: number[]) => void;
-  selectedManagerIds: number[];
-  onSelectedManagerIdsChange: (ids: number[]) => void;
   errors?: FieldErrors;
   onFieldInput?: (name: SupplierFormField) => void;
 }

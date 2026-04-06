@@ -10,9 +10,16 @@ export const metadata = {
 
 export default function SuppliersPage() {
   return (
-    <Suspense fallback={<SuppliersSkeleton />}>
-      <SuppliersPageContent />
-    </Suspense>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Gestion de Proveedores</h1>
+        <p className="mt-1 text-muted-foreground">Gestiona tus aliados comerciales y suministros.</p>
+      </div>
+
+      <Suspense fallback={<SuppliersSkeleton />}>
+        <SuppliersPageContent />
+      </Suspense>
+    </div>
   );
 }
 
