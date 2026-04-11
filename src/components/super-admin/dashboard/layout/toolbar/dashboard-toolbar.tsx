@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { Bell, Languages, Maximize, MessageSquare, Minimize, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -57,7 +57,9 @@ const translations: Record<string, { es: string; en: string }> = {
   Productos: { es: "Productos", en: "Products" },
   Organizacion: { es: "Organizacion", en: "Organization" },
   "Encargados de sucursal": { es: "Encargados de sucursal", en: "Branch Managers" },
+  "Super Admins": { es: "Super Admins", en: "Super Admins" },
   Usuarios: { es: "Usuarios", en: "Users" },
+  Configuraciones: { es: "Configuraciones", en: "Settings" },
   Dashboard: { es: "Dashboard", en: "Dashboard" },
 };
 
@@ -72,6 +74,8 @@ type ToolbarNotice = {
 };
 
 type ToolbarLanguage = "es" | "en" | "pt" | "fr";
+
+const NOTIFICATIONS_POLL_INTERVAL_MS = 120_000;
 
 const languageOptions: Array<{ value: ToolbarLanguage; label: string }> = [
   { value: "es", label: "Espanol" },
@@ -91,6 +95,7 @@ export function DashboardToolbar() {
   const [notices, setNotices] = useState<ToolbarNotice[]>([]);
   const [isSavingLanguage, setIsSavingLanguage] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const notificationsRequestInFlightRef = useRef(false);
   const breadcrumbs = useMemo(() => buildBreadcrumbs(pathname, language), [pathname, language]);
 
   useEffect(() => {
@@ -130,22 +135,61 @@ export function DashboardToolbar() {
 
   useEffect(() => {
     let mounted = true;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const stopPolling = () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
 
     const loadNotifications = () => {
+      if (notificationsRequestInFlightRef.current) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+
+      notificationsRequestInFlightRef.current = true;
       startTransition(async () => {
-        const result = await getSuperAdminToolbarNotificationsAction();
-        if (!mounted || !result.success || !result.data) return;
-        setUnreadCount(result.data.unreadCount);
-        setNotices(result.data.items);
+        try {
+          const result = await getSuperAdminToolbarNotificationsAction();
+          if (!mounted || !result.success || !result.data) return;
+          setUnreadCount(result.data.unreadCount);
+          setNotices(result.data.items);
+        } finally {
+          notificationsRequestInFlightRef.current = false;
+        }
       });
     };
 
+    const startPolling = () => {
+      if (intervalId !== null) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      intervalId = setInterval(loadNotifications, NOTIFICATIONS_POLL_INTERVAL_MS);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadNotifications();
+        startPolling();
+        return;
+      }
+
+      stopPolling();
+    };
+
     loadNotifications();
-    const interval = setInterval(loadNotifications, 30_000);
+    startPolling();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", loadNotifications);
+    window.addEventListener("online", loadNotifications);
 
     return () => {
       mounted = false;
-      clearInterval(interval);
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", loadNotifications);
+      window.removeEventListener("online", loadNotifications);
+      notificationsRequestInFlightRef.current = false;
     };
   }, []);
 
@@ -271,7 +315,24 @@ function buildBreadcrumbs(pathname: string, language: ToolbarLanguage): Crumb[] 
   }
 
   if (pathname.startsWith("/dashboard/me")) {
-    return [{ label: language === "es" ? "Mi perfil" : "My profile", href: "/dashboard/me" }];
+    const meRootLabel = language === "es" ? "Mi perfil" : "My profile";
+    if (pathname === "/dashboard/me") {
+      return [{ label: meRootLabel, href: "/dashboard/me" }];
+    }
+
+    const meSectionLabelMap: Record<string, string> = {
+      personal: language === "es" ? "Datos personales" : "Personal details",
+      competencies: language === "es" ? "Competencias" : "Competencies",
+      security: language === "es" ? "Seguridad" : "Security",
+    };
+
+    const section = pathname.split("/")[3] ?? "";
+    const sectionLabel = meSectionLabelMap[section] ?? section;
+
+    return [
+      { label: meRootLabel, href: "/dashboard/me" },
+      { label: sectionLabel, href: pathname },
+    ];
   }
 
   if (pathname.startsWith("/dashboard/notifications")) {

@@ -3,8 +3,10 @@ import { HUMAN_NAME_REGEX, parseIsoDate } from "@/lib/field-validation";
 
 import type { CreateAccountFieldErrors, CreateSuperAdminForm, ProfileFieldErrors, ProfileForm } from "./types";
 
-const SKILL_ENTRY_REGEX = /^\s*[^:,]{2,40}\s*:\s*(100|[1-9]?\d)\s*$/;
-const LANGUAGE_ENTRY_REGEX = /^\s*[^:,]{2,40}\s*:\s*(A1|A2|B1|B2|C1|C2)\s*:\s*[^:,]{2,60}\s*$/i;
+const HUMAN_ENTRY_PART = "[A-Za-z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F .'-]{1,39}";
+const CERT_ENTRY_PART = "[A-Za-z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F .'-]{1,59}";
+const SKILL_ENTRY_REGEX = new RegExp(`^\\s*${HUMAN_ENTRY_PART}\\s*:\\s*(100|[1-9]?\\d)\\s*$`, "i");
+const LANGUAGE_ENTRY_REGEX = new RegExp(`^\\s*${HUMAN_ENTRY_PART}\\s*:\\s*(A1|A2|B1|B2|C1|C2)\\s*:\\s*${CERT_ENTRY_PART}\\s*$`, "i");
 const MAX_SKILLS_ENTRIES = 10;
 
 function hasMinimumAge(date: Date, years: number): boolean {
@@ -40,12 +42,12 @@ export function validateProfile(value: ProfileForm, baseline?: ProfileForm): Pro
   if (hasChanged("skills") && value.skills) {
     const entries = value.skills.split(",").map((item) => item.trim()).filter(Boolean);
     if (entries.length > MAX_SKILLS_ENTRIES) errors.skills = `Puedes registrar maximo ${MAX_SKILLS_ENTRIES} habilidades`;
-    if (entries.some((entry) => !SKILL_ENTRY_REGEX.test(entry))) errors.skills = "Formato de habilidades invalido. Usa Nombre:80, Ventas:95";
+    if (entries.some((entry) => !SKILL_ENTRY_REGEX.test(entry))) errors.skills = "Formato de habilidades invalido. Usa Nombre:80 (sin numeros en el nombre)";
   }
   if (hasChanged("languages") && value.languages && value.languages.trim().length > 500) errors.languages = "Idiomas demasiado largos";
   if (hasChanged("languages") && value.languages) {
     const entries = value.languages.split(",").map((item) => item.trim()).filter(Boolean);
-    if (entries.some((entry) => !LANGUAGE_ENTRY_REGEX.test(entry))) errors.languages = "Formato de idiomas invalido. Usa Espanol:C2:Nativo, Ingles:B2:IELTS";
+    if (entries.some((entry) => !LANGUAGE_ENTRY_REGEX.test(entry))) errors.languages = "Formato de idiomas invalido. Usa Espanol:C2:Nativo, Ingles:B2:IELTS (sin numeros en nombre/certificacion)";
   }
 
   const credentialsTouched = hasChanged("username") || Boolean(value.newPassword) || Boolean(value.newPasswordConfirm);

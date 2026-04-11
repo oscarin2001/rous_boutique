@@ -6,6 +6,7 @@ import type {
   ManagerRow,
 } from "@/actions/super-admin/managers/types";
 
+import { InlineFieldError } from "@/components/super-admin/dashboard/shared/forms/inline-feedback";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
@@ -19,11 +20,6 @@ type FieldErrors = Partial<Record<ManagerFormField, string>>;
 
 const MAX_MANAGER_INCOME_BOB = 99999;
 const MAX_HOME_ADDRESS_LENGTH = 120;
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-xs text-destructive">{message}</p>;
-}
 
 const stripNewLines = (value: string) => value.replace(/[\n\r]/g, " ");
 const stripInvalidNameChars = (value: string) => value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ '\-]/g, "");
@@ -73,7 +69,7 @@ export function ManagerFormFields({
               onFieldInput?.("firstName");
             }}
           />
-          <FieldError message={errors?.firstName} />
+          <InlineFieldError message={errors?.firstName} />
         </div>
 
         <div>
@@ -92,7 +88,7 @@ export function ManagerFormFields({
               onFieldInput?.("lastName");
             }}
           />
-          <FieldError message={errors?.lastName} />
+          <InlineFieldError message={errors?.lastName} />
         </div>
 
         <div>
@@ -111,7 +107,7 @@ export function ManagerFormFields({
               onFieldInput?.("ci");
             }}
           />
-          <FieldError message={errors?.ci} />
+          <InlineFieldError message={errors?.ci} />
         </div>
 
         <div>
@@ -131,7 +127,7 @@ export function ManagerFormFields({
               onFieldInput?.("phone");
             }}
           />
-          <FieldError message={errors?.phone} />
+          <InlineFieldError message={errors?.phone} />
         </div>
 
         <div className="sm:col-span-2">
@@ -152,7 +148,7 @@ export function ManagerFormFields({
             />
             <span className="text-sm text-muted-foreground">@{MANAGER_EMAIL_DOMAIN}</span>
           </div>
-          <FieldError message={errors?.email} />
+          <InlineFieldError message={errors?.email} />
         </div>
 
         <div>
@@ -165,7 +161,7 @@ export function ManagerFormFields({
             maxLength={72}
             onInput={() => onFieldInput?.("password")}
           />
-          <FieldError message={errors?.password} />
+          <InlineFieldError message={errors?.password} />
         </div>
 
         <div>
@@ -178,7 +174,7 @@ export function ManagerFormFields({
             maxLength={72}
             onInput={() => onFieldInput?.("passwordConfirm")}
           />
-          <FieldError message={errors?.passwordConfirm} />
+          <InlineFieldError message={errors?.passwordConfirm} />
         </div>
 
         <div>
@@ -192,7 +188,7 @@ export function ManagerFormFields({
             required
             onValueChange={() => onFieldInput?.("birthDate")}
           />
-          <FieldError message={errors?.birthDate} />
+          <InlineFieldError message={errors?.birthDate} />
         </div>
 
         <div className="space-y-2">
@@ -211,7 +207,7 @@ export function ManagerFormFields({
             </Label>
           </div>
           <input type="hidden" name="receivesSalary" value={String(receivesSalary)} />
-          <FieldError message={errors?.receivesSalary} />
+          <InlineFieldError message={errors?.receivesSalary} />
         </div>
 
         <div>
@@ -234,7 +230,7 @@ export function ManagerFormFields({
               onFieldInput?.("salary");
             }}
           />
-          <FieldError message={errors?.salary} />
+          <InlineFieldError message={errors?.salary} />
         </div>
 
         <div className="sm:col-span-2">
@@ -249,7 +245,7 @@ export function ManagerFormFields({
               onFieldInput?.("homeAddress");
             }}
           />
-          <FieldError message={errors?.homeAddress} />
+          <InlineFieldError message={errors?.homeAddress} />
         </div>
 
         <div>
@@ -263,7 +259,7 @@ export function ManagerFormFields({
             required
             onValueChange={() => onFieldInput?.("hireDate")}
           />
-          <FieldError message={errors?.hireDate} />
+          <InlineFieldError message={errors?.hireDate} />
         </div>
       </div>
 

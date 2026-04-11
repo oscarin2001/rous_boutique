@@ -12,7 +12,7 @@ function hasMinimumAge(date: Date, years: number): boolean {
 export const updateProfileSchema = z.object({
   firstName: z.string().trim().min(2).max(30).regex(HUMAN_NAME_REGEX, "Nombre invalido"),
   lastName: z.string().trim().min(2).max(30).regex(HUMAN_NAME_REGEX, "Apellido invalido"),
-  birthDate: z.string().trim().min(1, "Ingresa la fecha de nacimiento"),
+  birthDate: z.string().trim().optional().or(z.literal("")),
   phone: z.string().trim().optional().or(z.literal("")).refine((v) => !v || BOLIVIA_PHONE_REGEX.test(v), "Telefono invalido"),
   ci: z.string().trim().regex(/^[A-Za-z0-9-]{5,20}$/, "CI invalido"),
   profession: z.string().trim().max(80, "Profesion demasiado larga").optional().or(z.literal("")),
@@ -45,15 +45,17 @@ export const updateProfileSchema = z.object({
     .or(z.literal("")),
   newPasswordConfirm: z.string().optional().or(z.literal("")),
 }).superRefine((data, ctx) => {
-  const birthDate = parseIsoDate(data.birthDate);
-  if (!birthDate) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["birthDate"], message: "Fecha de nacimiento invalida" });
-  } else {
-    if (birthDate > new Date()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["birthDate"], message: "La fecha de nacimiento no puede ser futura" });
-    }
-    if (!hasMinimumAge(birthDate, 18)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["birthDate"], message: "Debe ser mayor de 18 anos" });
+  if (data.birthDate) {
+    const birthDate = parseIsoDate(data.birthDate);
+    if (!birthDate) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["birthDate"], message: "Fecha de nacimiento invalida" });
+    } else {
+      if (birthDate > new Date()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["birthDate"], message: "La fecha de nacimiento no puede ser futura" });
+      }
+      if (!hasMinimumAge(birthDate, 18)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["birthDate"], message: "Debe ser mayor de 18 anos" });
+      }
     }
   }
 
@@ -68,7 +70,6 @@ export const updateProfileSchema = z.object({
   if (hasPassword && hasConfirm && data.newPassword !== data.newPasswordConfirm) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["newPasswordConfirm"], message: "La confirmacion no coincide" });
   }
-
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

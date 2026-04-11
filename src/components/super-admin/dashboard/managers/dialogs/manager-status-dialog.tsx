@@ -6,6 +6,7 @@ import { Power } from "lucide-react";
 
 import type { ManagerRow } from "@/actions/super-admin/managers/types";
 
+import { InlineActionError } from "@/components/super-admin/dashboard/shared/forms/inline-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -135,7 +136,7 @@ export function ManagerStatusDialog({
               setMessage(null);
             }}
           />
-          {message ? <p className="text-sm text-destructive">{message}</p> : null}
+          <InlineActionError message={message} />
         </div>
 
         <DialogFooter>

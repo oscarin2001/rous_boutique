@@ -1,5 +1,4 @@
 export type TabId =
-  | "profile"
   | "notifications"
   | "system"
   | "account-security"
@@ -85,4 +84,4 @@ export type AuditFeedRow = {
   actorName: string;
 };
 
-export type SensitiveAction = "profile" | "system" | "createAccount" | "revokeSessions";
+export type SensitiveAction = "system" | "createAccount" | "revokeSessions";

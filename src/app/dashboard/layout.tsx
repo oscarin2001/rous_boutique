@@ -27,12 +27,23 @@ export default async function DashboardLayout({
     orderBy: { name: "asc" },
   });
 
+  const sidebarProfile = await prisma.employee.findUnique({
+    where: { id: session.employeeId },
+    select: {
+      firstName: true,
+      lastName: true,
+      role: { select: { code: true } },
+      employeeProfile: { select: { photoUrl: true } },
+    },
+  });
+
   return (
     <SidebarProvider>
       <AppSidebar
-        firstName={session.firstName}
-        lastName={session.lastName}
-        roleCode={session.roleCode}
+        firstName={sidebarProfile?.firstName ?? session.firstName}
+        lastName={sidebarProfile?.lastName ?? session.lastName}
+        roleCode={sidebarProfile?.role.code ?? session.roleCode}
+        photoUrl={sidebarProfile?.employeeProfile?.photoUrl ?? null}
         branches={branches}
         defaultBranchId={defaultBranchId}
       />

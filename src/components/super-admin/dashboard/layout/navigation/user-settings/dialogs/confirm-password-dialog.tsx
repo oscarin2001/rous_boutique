@@ -45,7 +45,13 @@ export function ConfirmPasswordDialog({ open, title, description, isPending, err
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
-          <Button onClick={handleConfirm} disabled={isPending || !password.trim()}>{isPending ? "Validando..." : "Confirmar"}</Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={isPending || !password.trim()}
+            className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+          >
+            {isPending ? "Validando..." : "Confirmar"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

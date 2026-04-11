@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import {
   Activity,
@@ -8,8 +8,6 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
-  UserCog,
-  Users,
 } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,62 +19,33 @@ import {
   AccountSecurityTab,
   AuditTab,
   NotificationsTab,
-  ProfileTab,
-  SuperadminsTab,
   SystemTab,
 } from "../tabs";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  entryPoint?: "profile-view" | "profile-edit" | "settings";
-  onProfileIdentityChange?: (payload: { firstName: string; lastName: string }) => void;
 };
 
 const tabMenu = [
-  { id: "profile" as const, label: "Perfil", icon: UserCog },
   { id: "notifications" as const, label: "Notificaciones", icon: Bell },
   { id: "system" as const, label: "Sistema", icon: SlidersHorizontal },
   { id: "account-security" as const, label: "Seguridad", icon: ShieldCheck },
-  { id: "superadmins" as const, label: "Super Admins", icon: Users },
   { id: "audit" as const, label: "Auditoría", icon: Activity },
 ] as const;
 
 export function UserSettingsDialog({
   open,
   onOpenChange,
-  entryPoint = "settings",
-  onProfileIdentityChange,
 }: Props) {
-  const state = useUserSettings(open, onProfileIdentityChange);
-  const [profileEditable, setProfileEditable] = useState(false);
+  const state = useUserSettings(open);
 
-  const { setActiveTab, setIsEditingCredentials, activeTab } = state;
+  const { setActiveTab, activeTab } = state;
 
-  // Manejo de entryPoint
   useEffect(() => {
     if (!open) return;
-
-    switch (entryPoint) {
-      case "profile-edit":
-        setActiveTab("profile");
-        setIsEditingCredentials(false);
-        setProfileEditable(true);
-        break;
-
-      case "profile-view":
-        setActiveTab("profile");
-        setIsEditingCredentials(false);
-        setProfileEditable(false);
-        break;
-
-      default:
-        setActiveTab("system");
-        setIsEditingCredentials(false);
-        setProfileEditable(false);
-        break;
-    }
-  }, [open, entryPoint, setActiveTab, setIsEditingCredentials]);
+    setActiveTab("system");
+  }, [open, setActiveTab]);
 
   const currentTab = tabMenu.find((tab) => tab.id === activeTab);
 
@@ -129,21 +98,6 @@ export function UserSettingsDialog({
 
           {/* Contenido principal */}
           <section className="overflow-y-auto bg-card p-8">
-            {activeTab === "profile" && (
-              <ProfileTab
-                profile={state.profile}
-                profileSnapshot={state.profileSnapshot}
-                profileErrors={state.profileErrors}
-                isPending={state.isPending}
-                isEditingCredentials={state.isEditingCredentials}
-                isEditable={profileEditable}
-                setIsEditingCredentials={state.setIsEditingCredentials}
-                setProfile={state.setProfile}
-                setProfileErrors={state.setProfileErrors}
-                onSave={state.saveProfile}
-              />
-            )}
-
             {activeTab === "notifications" && (
               <NotificationsTab
                 system={state.system}
@@ -167,17 +121,6 @@ export function UserSettingsDialog({
                 sessions={state.sessions}
                 isPending={state.isPending}
                 onRevokeOther={state.revokeOtherSessions}
-              />
-            )}
-
-            {activeTab === "superadmins" && (
-              <SuperadminsTab
-                form={state.createAccount}
-                errors={state.createErrors}
-                isPending={state.isPending}
-                setForm={state.setCreateAccount}
-                setErrors={state.setCreateErrors}
-                onCreate={state.createSuperAdmin}
               />
             )}
 

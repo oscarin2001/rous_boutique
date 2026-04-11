@@ -7,6 +7,8 @@ import { ensureSuperAdminSession } from "./common";
 const SETTINGS_ENTITIES = [
   "SuperAdminLogin",
   "SuperAdminProfile",
+  "SuperAdminProfilePersonal",
+  "SuperAdminProfileCompetencies",
   "SuperAdminCredentials",
   "SuperAdminSystemSettings",
   "SuperAdminSessions",
@@ -49,6 +51,8 @@ type AuditSourceLog = {
 function eventTitle(entity: string, action: string): string {
   if (entity === "SuperAdminLogin") return "Nuevo inicio de sesion en dispositivo";
   if (entity === "SuperAdminProfile") return "Perfil actualizado";
+  if (entity === "SuperAdminProfilePersonal") return "Datos personales actualizados";
+  if (entity === "SuperAdminProfileCompetencies") return "Competencias actualizadas";
   if (entity === "SuperAdminCredentials") return "Credenciales actualizadas";
   if (entity === "SuperAdminSystemSettings") return "Configuracion del sistema actualizada";
   if (entity === "SuperAdminSessions") return "Sesiones revocadas";
@@ -60,6 +64,8 @@ function eventDescription(entity: string): string {
   if (entity === "SuperAdminLogin") return "Se detecto actividad de inicio de sesion. Solo se muestra la ultima conexion por dispositivo.";
   if (entity === "SuperAdminSessions") return "Se cerraron sesiones activas en otros dispositivos.";
   if (entity === "SuperAdminAccount") return "Se registro una nueva cuenta con privilegios SUPERADMIN.";
+  if (entity === "SuperAdminProfilePersonal") return "Se actualizaron datos personales del perfil del superadmin.";
+  if (entity === "SuperAdminProfileCompetencies") return "Se actualizaron habilidades o idiomas del perfil del superadmin.";
   return "Se aplicaron cambios de configuracion en el modulo de superadmin.";
 }
 

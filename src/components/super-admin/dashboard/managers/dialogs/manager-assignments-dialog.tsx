@@ -6,6 +6,7 @@ import { Link2 } from "lucide-react";
 
 import type { ManagerActionResult, ManagerBranchOption, ManagerRow } from "@/actions/super-admin/managers/types";
 
+import { InlineActionError } from "@/components/super-admin/dashboard/shared/forms/inline-feedback";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -95,7 +96,7 @@ export function ManagerAssignmentsDialog({ open, onOpenChange, manager, branchOp
           <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
         </div>
 
-        {message ? <p className="text-sm text-destructive">{message}</p> : null}
+        <InlineActionError message={message} />
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

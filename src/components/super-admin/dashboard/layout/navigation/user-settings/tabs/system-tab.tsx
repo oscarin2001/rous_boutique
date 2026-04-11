@@ -45,7 +45,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
       </div>
 
       {/* ACORDEÓN 1: Apariencia */}
-      <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="rounded-xl bg-muted/30 overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("appearance")}
@@ -71,9 +71,9 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                     key={option.value}
                     type="button"
                     onClick={() => setSystem((v) => ({ ...v, theme: option.value }))}
-                    className={`flex flex-col items-center justify-center rounded-lg border py-4 text-xs transition-all hover:border-primary/50 ${
+                    className={`flex flex-col items-center justify-center rounded-lg bg-background/70 py-4 text-xs transition-all ${
                       isSelected
-                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                        ? "bg-primary/10 ring-1 ring-primary/30"
                         : "hover:bg-muted"
                     }`}
                   >
@@ -88,7 +88,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
       </div>
 
       {/* ACORDEÓN 2: Preferencias Regionales */}
-      <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="rounded-xl bg-muted/30 overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("regional")}
@@ -204,7 +204,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
       </div>
 
       {/* ACORDEÓN 3: Contingencia y Firma */}
-      <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="rounded-xl bg-muted/30 overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection("contingency")}

@@ -42,7 +42,7 @@ export function AccountSecurityTab({ sessions, isPending, onRevokeOther }: Props
       <Collapsible
         open={openSection === "actions"}
         onOpenChange={() => toggleSection("actions")}
-        className="rounded-xl border bg-card"
+        className="rounded-xl bg-muted/30"
       >
         <CollapsibleTrigger className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-muted/50 transition-colors">
           <h3 className="font-medium">Acciones de seguridad</h3>
@@ -77,7 +77,7 @@ export function AccountSecurityTab({ sessions, isPending, onRevokeOther }: Props
       <Collapsible
         open={openSection === "sessions"}
         onOpenChange={() => toggleSection("sessions")}
-        className="rounded-xl border bg-card"
+        className="rounded-xl bg-muted/30"
       >
         <CollapsibleTrigger className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-muted/50 transition-colors">
           <h3 className="font-medium">Sesiones registradas</h3>
@@ -94,7 +94,7 @@ export function AccountSecurityTab({ sessions, isPending, onRevokeOther }: Props
               sessions.map((item) => (
                 <div 
                   key={item.sessionId} 
-                  className="rounded-lg border p-4 text-sm"
+                  className="rounded-lg bg-background/70 p-4 text-sm"
                 >
                   <div className="flex items-start justify-between">
                     <div>
@@ -120,7 +120,7 @@ export function AccountSecurityTab({ sessions, isPending, onRevokeOther }: Props
                 </div>
               ))
             ) : (
-              <div className="rounded-lg border border-dashed p-8 text-center">
+              <div className="rounded-lg bg-background/70 p-8 text-center">
                 <p className="text-muted-foreground">No hay sesiones registradas recientemente.</p>
               </div>
             )}

@@ -7,7 +7,6 @@ import { Bell, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 
 import type { SystemForm } from "../core";
 
@@ -55,7 +54,7 @@ export function NotificationsTab({ system, isPending, setSystem, onSave }: Props
       </div>
 
       {/* Configuración General */}
-      <div className="rounded-2xl border bg-card p-8">
+      <div className="rounded-2xl bg-muted/30 p-8">
         <h3 className="text-lg font-semibold mb-6">Estado General</h3>
         
         <div className="flex items-center gap-3">
@@ -76,7 +75,7 @@ export function NotificationsTab({ system, isPending, setSystem, onSave }: Props
       </div>
 
       {/* Canales de Notificación */}
-      <div className="rounded-2xl border bg-card p-8">
+      <div className="rounded-2xl bg-muted/30 p-8">
         <h3 className="text-lg font-semibold mb-6">Canales y Eventos</h3>
         
         <div className="space-y-6">

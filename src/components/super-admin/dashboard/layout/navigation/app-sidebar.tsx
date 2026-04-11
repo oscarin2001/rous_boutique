@@ -19,6 +19,7 @@ interface AppSidebarProps {
   firstName: string;
   lastName: string;
   roleCode: string;
+  photoUrl?: string | null;
   branches: { id: number; name: string; city: string }[];
   defaultBranchId: number | null;
 }
@@ -27,6 +28,7 @@ export function AppSidebar({
   firstName,
   lastName,
   roleCode,
+  photoUrl,
   branches,
   defaultBranchId,
 }: AppSidebarProps) {
@@ -46,6 +48,7 @@ export function AppSidebar({
           firstName={firstName}
           lastName={lastName}
           roleCode={roleCode}
+          photoUrl={photoUrl}
           logoutAction={logoutAction}
         />
       </SidebarFooter>

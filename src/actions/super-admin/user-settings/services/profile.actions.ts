@@ -9,12 +9,19 @@ import { parseIsoDate } from "@/lib/field-validation";
 import { prisma } from "@/lib/prisma";
 import { createSession } from "@/lib/session";
 
-import { ensureSuperAdminSession, getCredentialChangeWindow } from "./common";
+import {
+  ensureSuperAdminSession,
+  getCompetenciesProfileEditWindow,
+  getCredentialChangeWindow,
+  getPersonalProfileEditWindow,
+} from "./common";
 import { updateProfileSchema, type UpdateProfileInput } from "../schemas/profile.schema";
 
 const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
-const SKILL_ENTRY_REGEX = /^\s*[^:,]{2,40}\s*:\s*(100|[1-9]?\d)\s*$/;
-const LANGUAGE_ENTRY_REGEX = /^\s*[^:,]{2,40}\s*:\s*(A1|A2|B1|B2|C1|C2)\s*:\s*[^:,]{2,60}\s*$/i;
+const HUMAN_ENTRY_PART = "[A-Za-z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F .'-]{1,39}";
+const CERT_ENTRY_PART = "[A-Za-z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F .'-]{1,59}";
+const SKILL_ENTRY_REGEX = new RegExp(`^\\s*${HUMAN_ENTRY_PART}\\s*:\\s*(100|[1-9]?\\d)\\s*$`, "i");
+const LANGUAGE_ENTRY_REGEX = new RegExp(`^\\s*${HUMAN_ENTRY_PART}\\s*:\\s*(A1|A2|B1|B2|C1|C2)\\s*:\\s*${CERT_ENTRY_PART}\\s*$`, "i");
 const MAX_SKILLS_ENTRIES = 10;
 
 const MIME_TO_EXTENSION: Record<string, string> = {
@@ -199,7 +206,11 @@ export async function getSuperAdminProfileAction() {
   });
 
   if (!employee) return { success: false, error: "Perfil no encontrado" };
-  const credentialWindow = await getCredentialChangeWindow(employee.auth.id);
+  const [credentialWindow, personalWindow, competenciesWindow] = await Promise.all([
+    getCredentialChangeWindow(employee.auth.id),
+    getPersonalProfileEditWindow(employee.id),
+    getCompetenciesProfileEditWindow(employee.id),
+  ]);
 
   return {
     success: true,
@@ -220,6 +231,21 @@ export async function getSuperAdminProfileAction() {
       canChangeCredentials: credentialWindow.canChange,
       lastCredentialChangeAt: credentialWindow.lastCredentialChangeAt?.toISOString() ?? null,
       nextCredentialChangeAt: credentialWindow.nextCredentialChangeAt?.toISOString() ?? null,
+      canEditPersonal: personalWindow.canEdit,
+      lastPersonalEditAt: personalWindow.lastProfileEditAt?.toISOString() ?? null,
+      nextPersonalEditAt: personalWindow.nextProfileEditAt?.toISOString() ?? null,
+      canEditCompetencies: competenciesWindow.canEdit,
+      lastCompetenciesEditAt: competenciesWindow.lastProfileEditAt?.toISOString() ?? null,
+      nextCompetenciesEditAt: competenciesWindow.nextProfileEditAt?.toISOString() ?? null,
+      canEditProfile: personalWindow.canEdit && competenciesWindow.canEdit,
+      lastProfileEditAt:
+        personalWindow.lastProfileEditAt?.toISOString() ??
+        competenciesWindow.lastProfileEditAt?.toISOString() ??
+        null,
+      nextProfileEditAt:
+        personalWindow.nextProfileEditAt?.toISOString() ??
+        competenciesWindow.nextProfileEditAt?.toISOString() ??
+        null,
     },
   };
 }
@@ -230,9 +256,6 @@ export async function updateSuperAdminProfileAction(input: UpdateProfileInput) {
 
   const parsed = updateProfileSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Datos invalidos" };
-
-  const birthDate = parseIsoDate(parsed.data.birthDate);
-  if (!birthDate) return { success: false, error: "Fecha de nacimiento invalida" };
 
   const existing = await prisma.employee.findUnique({
     where: { id: session.employeeId },
@@ -253,10 +276,32 @@ export async function updateSuperAdminProfileAction(input: UpdateProfileInput) {
   });
   if (!existing) return { success: false, error: "Perfil no encontrado" };
 
+  const existingBirthDate = existing.employeeProfile?.birthDate
+    ? existing.employeeProfile.birthDate.toISOString().slice(0, 10)
+    : "";
+  const incomingBirthDate = (parsed.data.birthDate ?? "").trim();
+  const resolvedBirthDateInput = incomingBirthDate || existingBirthDate;
+  const birthDate = resolvedBirthDateInput ? parseIsoDate(resolvedBirthDateInput) : null;
+  if (incomingBirthDate && !birthDate) return { success: false, error: "Fecha de nacimiento invalida" };
+  const existingPhotoUrl = existing.employeeProfile?.photoUrl ?? "";
+  const existingSkills = formatSkillsForInput(existing.employeeSkills);
+  const existingLanguages = formatLanguagesForInput(existing.employeeLanguages);
+
+  const personalFieldsChanged =
+    parsed.data.firstName !== existing.firstName ||
+    parsed.data.lastName !== existing.lastName ||
+    resolvedBirthDateInput !== existingBirthDate ||
+    parsed.data.phone !== (existing.phone ?? "") ||
+    parsed.data.ci !== existing.ci ||
+    parsed.data.profession !== (existing.employeeProfile?.profession ?? "") ||
+    parsed.data.photoUrl !== existingPhotoUrl ||
+    parsed.data.aboutMe !== (existing.employeeProfile?.aboutMe ?? "");
+
   const professionChanged = parsed.data.profession !== (existing.employeeProfile?.profession ?? "");
   const aboutMeChanged = parsed.data.aboutMe !== (existing.employeeProfile?.aboutMe ?? "");
-  const skillsChanged = parsed.data.skills !== formatSkillsForInput(existing.employeeSkills);
-  const languagesChanged = parsed.data.languages !== formatLanguagesForInput(existing.employeeLanguages);
+  const skillsChanged = parsed.data.skills !== existingSkills;
+  const languagesChanged = parsed.data.languages !== existingLanguages;
+  const competenciesChanged = skillsChanged || languagesChanged;
 
   if (professionChanged && parsed.data.profession && parsed.data.profession.trim().length < 3) {
     return { success: false, error: "Profesion demasiado corta" };
@@ -273,13 +318,13 @@ export async function updateSuperAdminProfileAction(input: UpdateProfileInput) {
       return { success: false, error: `Puedes registrar maximo ${MAX_SKILLS_ENTRIES} habilidades` };
     }
     if (entries.some((entry) => !SKILL_ENTRY_REGEX.test(entry))) {
-      return { success: false, error: "Formato de habilidades invalido. Usa Nombre:80, Ventas:95" };
+      return { success: false, error: "Formato de habilidades invalido. Usa Nombre:80 (sin numeros en el nombre)" };
     }
   }
   if (languagesChanged && parsed.data.languages) {
     const entries = parsed.data.languages.split(",").map((item) => item.trim()).filter(Boolean);
     if (entries.some((entry) => !LANGUAGE_ENTRY_REGEX.test(entry))) {
-      return { success: false, error: "Formato de idiomas invalido. Usa Espanol:C2:Nativo, Ingles:B2:IELTS" };
+      return { success: false, error: "Formato de idiomas invalido. Usa Espanol:C2:Nativo, Ingles:B2:IELTS (sin numeros en nombre/certificacion)" };
     }
   }
 
@@ -298,9 +343,31 @@ export async function updateSuperAdminProfileAction(input: UpdateProfileInput) {
     const ciExists = await prisma.employee.findFirst({ where: { ci: parsed.data.ci, id: { not: existing.id } }, select: { id: true } });
     if (ciExists) return { success: false, error: "La CI ya existe" };
   }
+  if (personalFieldsChanged) {
+    const personalWindow = await getPersonalProfileEditWindow(existing.id);
+    if (!personalWindow.canEdit) {
+      return {
+        success: false,
+        error: `Solo puedes editar datos personales cada 3 meses. Proxima edicion: ${personalWindow.nextProfileEditAt?.toLocaleDateString("es-BO") ?? "pendiente"}`,
+      };
+    }
+  }
+  if (competenciesChanged) {
+    const competenciesWindow = await getCompetenciesProfileEditWindow(existing.id);
+    if (!competenciesWindow.canEdit) {
+      return {
+        success: false,
+        error: `Solo puedes editar competencias cada 3 meses. Proxima edicion: ${competenciesWindow.nextProfileEditAt?.toLocaleDateString("es-BO") ?? "pendiente"}`,
+      };
+    }
+  }
   if (credentialsChanged) {
     const credentialWindow = await getCredentialChangeWindow(existing.auth.id);
     if (!credentialWindow.canChange) return { success: false, error: `Solo puedes cambiar usuario/contrasena cada 3 meses. Proximo cambio: ${credentialWindow.nextCredentialChangeAt?.toLocaleDateString("es-BO") ?? "pendiente"}` };
+  }
+
+  if (!personalFieldsChanged && !competenciesChanged && !credentialsChanged) {
+    return { success: true, data: { firstName: existing.firstName, lastName: existing.lastName } };
   }
 
   const normalizedPhotoUrl = parsed.data.photoUrl || null;
@@ -308,65 +375,157 @@ export async function updateSuperAdminProfileAction(input: UpdateProfileInput) {
   const normalizedSkills = parseSkillsFromInput(parsed.data.skills);
 
   await prisma.$transaction(async (tx) => {
-    await tx.employee.update({
-      where: { id: existing.id },
-      data: {
-        firstName: parsed.data.firstName,
-        lastName: parsed.data.lastName,
-        phone: parsed.data.phone || null,
-        ci: parsed.data.ci,
-      },
-    });
+    if (personalFieldsChanged) {
+      await tx.employee.update({
+        where: { id: existing.id },
+        data: {
+          firstName: parsed.data.firstName,
+          lastName: parsed.data.lastName,
+          phone: parsed.data.phone || null,
+          ci: parsed.data.ci,
+        },
+      });
 
-    await tx.employeeProfile.upsert({
-      where: { employeeId: existing.id },
-      update: {
-        birthDate,
-        profession: parsed.data.profession || null,
-        photoUrl: normalizedPhotoUrl,
-        aboutMe: parsed.data.aboutMe || null,
-      },
-      create: {
-        employeeId: existing.id,
-        birthDate,
-        profession: parsed.data.profession || null,
-        photoUrl: normalizedPhotoUrl,
-        aboutMe: parsed.data.aboutMe || null,
-      },
-    });
-
-    await tx.employeeSkill.deleteMany({ where: { employeeId: existing.id } });
-    if (normalizedSkills.length > 0) {
-      await tx.employeeSkill.createMany({
-        data: normalizedSkills.map((item) => ({
+      await tx.employeeProfile.upsert({
+        where: { employeeId: existing.id },
+        update: {
+          birthDate: birthDate ?? null,
+          profession: parsed.data.profession || null,
+          photoUrl: normalizedPhotoUrl,
+          aboutMe: parsed.data.aboutMe || null,
+        },
+        create: {
           employeeId: existing.id,
-          name: item.name,
-          level: item.level,
-        })),
+          birthDate: birthDate ?? null,
+          profession: parsed.data.profession || null,
+          photoUrl: normalizedPhotoUrl,
+          aboutMe: parsed.data.aboutMe || null,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          entity: "SuperAdminProfilePersonal",
+          entityId: existing.id,
+          action: "UPDATE",
+          employeeId: existing.id,
+          oldValue: JSON.stringify({
+            firstName: existing.firstName,
+            lastName: existing.lastName,
+            birthDate: existing.employeeProfile?.birthDate?.toISOString() ?? null,
+            phone: existing.phone,
+            ci: existing.ci,
+            profession: existing.employeeProfile?.profession ?? null,
+            photoUrl: existing.employeeProfile?.photoUrl ?? null,
+            aboutMe: existing.employeeProfile?.aboutMe ?? null,
+          }),
+          newValue: JSON.stringify({
+            firstName: parsed.data.firstName,
+            lastName: parsed.data.lastName,
+            birthDate: birthDate?.toISOString() ?? null,
+            phone: parsed.data.phone || null,
+            ci: parsed.data.ci,
+            profession: parsed.data.profession || null,
+            photoUrl: normalizedPhotoUrl,
+            aboutMe: parsed.data.aboutMe || null,
+          }),
+        },
       });
     }
 
-    await tx.employeeLanguage.deleteMany({ where: { employeeId: existing.id } });
-    if (normalizedLanguages.length > 0) {
-      await tx.employeeLanguage.createMany({
-        data: normalizedLanguages.map((item) => ({
+    if (competenciesChanged) {
+      if (skillsChanged) {
+        await tx.employeeSkill.deleteMany({ where: { employeeId: existing.id } });
+        if (normalizedSkills.length > 0) {
+          await tx.employeeSkill.createMany({
+            data: normalizedSkills.map((item) => ({
+              employeeId: existing.id,
+              name: item.name,
+              level: item.level,
+            })),
+          });
+        }
+      }
+
+      if (languagesChanged) {
+        await tx.employeeLanguage.deleteMany({ where: { employeeId: existing.id } });
+        if (normalizedLanguages.length > 0) {
+          await tx.employeeLanguage.createMany({
+            data: normalizedLanguages.map((item) => ({
+              employeeId: existing.id,
+              language: `${item.name} [${item.code}]`,
+              level: item.certification ? `${item.level} | ${item.certification}` : item.level,
+            })),
+          });
+        }
+      }
+
+      await tx.auditLog.create({
+        data: {
+          entity: "SuperAdminProfileCompetencies",
+          entityId: existing.id,
+          action: "UPDATE",
           employeeId: existing.id,
-          language: `${item.name} [${item.code}]`,
-          level: item.certification ? `${item.level} | ${item.certification}` : item.level,
-        })),
+          oldValue: JSON.stringify({
+            skills: existing.employeeSkills,
+            languages: existing.employeeLanguages,
+          }),
+          newValue: JSON.stringify({
+            skills: normalizedSkills,
+            languages: normalizedLanguages,
+          }),
+        },
       });
     }
 
-    if (credentialsChanged) await tx.auth.update({ where: { id: existing.auth.id }, data: { username: parsed.data.username, password: passwordChanged ? await bcrypt.hash(parsed.data.newPassword as string, 12) : undefined } });
-    await tx.auditLog.create({ data: { entity: "SuperAdminProfile", entityId: existing.id, action: "UPDATE", employeeId: existing.id, oldValue: JSON.stringify({ firstName: existing.firstName, lastName: existing.lastName, birthDate: existing.employeeProfile?.birthDate?.toISOString() ?? null, phone: existing.phone, ci: existing.ci, profession: existing.employeeProfile?.profession ?? null, photoUrl: existing.employeeProfile?.photoUrl ?? null, aboutMe: existing.employeeProfile?.aboutMe ?? null, skills: existing.employeeSkills, languages: existing.employeeLanguages }), newValue: JSON.stringify({ firstName: parsed.data.firstName, lastName: parsed.data.lastName, birthDate: birthDate.toISOString(), phone: parsed.data.phone || null, ci: parsed.data.ci, profession: parsed.data.profession || null, photoUrl: normalizedPhotoUrl, aboutMe: parsed.data.aboutMe || null, skills: normalizedSkills, languages: normalizedLanguages }) } });
-    if (credentialsChanged) await tx.auditLog.create({ data: { entity: "SuperAdminCredentials", entityId: existing.auth.id, action: "UPDATE", employeeId: existing.id, oldValue: JSON.stringify({ username: existing.auth.username, passwordChanged: false }), newValue: JSON.stringify({ username: parsed.data.username, passwordChanged }) } });
+    if (credentialsChanged) {
+      await tx.auth.update({
+        where: { id: existing.auth.id },
+        data: {
+          username: parsed.data.username,
+          password: passwordChanged ? await bcrypt.hash(parsed.data.newPassword as string, 12) : undefined,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          entity: "SuperAdminCredentials",
+          entityId: existing.auth.id,
+          action: "UPDATE",
+          employeeId: existing.id,
+          oldValue: JSON.stringify({ username: existing.auth.username, passwordChanged: false }),
+          newValue: JSON.stringify({ username: parsed.data.username, passwordChanged }),
+        },
+      });
+    }
   });
 
   if (existing.employeeProfile?.photoUrl && existing.employeeProfile.photoUrl !== normalizedPhotoUrl) {
     await deleteManagedPhotoFile(existing.employeeProfile.photoUrl);
   }
 
-  const setting = await prisma.employeeSettings.findUnique({ where: { employeeId: existing.id }, select: { sessionTtlMinutes: true } });
-  await createSession({ authId: existing.auth.id, employeeId: existing.id, username: parsed.data.username, roleCode: existing.role.code, firstName: parsed.data.firstName, lastName: parsed.data.lastName }, { ttlMinutes: setting?.sessionTtlMinutes ?? 480, reuseSessionId: session.sessionId });
+  const shouldRefreshSession =
+    credentialsChanged ||
+    parsed.data.firstName !== existing.firstName ||
+    parsed.data.lastName !== existing.lastName;
+
+  if (shouldRefreshSession) {
+    const setting = await prisma.employeeSettings.findUnique({
+      where: { employeeId: existing.id },
+      select: { sessionTtlMinutes: true },
+    });
+    await createSession(
+      {
+        authId: existing.auth.id,
+        employeeId: existing.id,
+        username: parsed.data.username,
+        roleCode: existing.role.code,
+        firstName: parsed.data.firstName,
+        lastName: parsed.data.lastName,
+      },
+      { ttlMinutes: setting?.sessionTtlMinutes ?? 480, reuseSessionId: session.sessionId },
+    );
+  }
+
   return { success: true, data: { firstName: parsed.data.firstName, lastName: parsed.data.lastName } };
 }

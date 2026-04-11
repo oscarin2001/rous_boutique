@@ -11,6 +11,7 @@ import type {
   ManagerRow,
 } from "@/actions/super-admin/managers/types";
 
+import { InlineActionError } from "@/components/super-admin/dashboard/shared/forms/inline-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -433,7 +434,7 @@ export function ManagerFormDialog({
               isEdit={isEdit}
             />
 
-            {confirmMessage ? <p className="text-sm text-destructive">{confirmMessage}</p> : null}
+            <InlineActionError message={confirmMessage} />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -479,7 +480,7 @@ export function ManagerFormDialog({
               />
             </div>
 
-            {confirmMessage ? <p className="text-sm text-destructive">{confirmMessage}</p> : null}
+            <InlineActionError message={confirmMessage} />
 
             <DialogFooter>
               <Button
