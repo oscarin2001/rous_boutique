@@ -23,6 +23,8 @@ type PasswordConfirmModalProps = {
   errorMessage?: string | null;
   confirmLabel?: string;
   policyNotice?: string;
+  sectionTitle?: string;
+  sectionSummary?: string;
   onOpenChange: (open: boolean) => void;
   onConfirm: (password: string) => void;
 };
@@ -35,6 +37,8 @@ export function PasswordConfirmModal({
   errorMessage,
   confirmLabel = "Confirmar y guardar",
   policyNotice,
+  sectionTitle,
+  sectionSummary,
   onOpenChange,
   onConfirm,
 }: PasswordConfirmModalProps) {
@@ -57,8 +61,15 @@ export function PasswordConfirmModal({
             <DialogDescription className="text-sm">{description}</DialogDescription>
           </DialogHeader>
 
+          {sectionTitle || sectionSummary ? (
+            <div className="rounded-lg bg-muted/35 p-3">
+              {sectionTitle ? <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{sectionTitle}</p> : null}
+              {sectionSummary ? <p className="mt-1 text-sm text-foreground/90">{sectionSummary}</p> : null}
+            </div>
+          ) : null}
+
           {policyNotice ? (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+            <div className="rounded-lg bg-amber-500/10 p-3">
               <p className="text-xs text-amber-700 dark:text-amber-400">{policyNotice}</p>
             </div>
           ) : null}
@@ -69,13 +80,14 @@ export function PasswordConfirmModal({
               id="me-password-confirm"
               value={password}
               placeholder="Ingresa tu contrasena actual"
+              maxLength={72}
               onChange={(event) => setPassword(event.target.value)}
             />
             <InlineActionError message={errorMessage} className="text-xs" />
           </div>
         </div>
 
-        <DialogFooter className="border-t border-border p-4">
+        <DialogFooter className="p-4 pt-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>

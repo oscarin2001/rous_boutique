@@ -106,9 +106,7 @@ function CollapsibleGroup({
                 <SidebarMenuSubButton
                   render={<Link href={item.url} />}
                   isActive={pathname === item.url}
-                  className="gap-2"
                 >
-                  {item.icon ? <item.icon className="size-3.5" /> : null}
                   <span>{item.title}</span>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>

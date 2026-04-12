@@ -17,8 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { EditStepsHeader, ReviewChangesPanel, type ReviewChangeItem } from "../../shared/edit-review";
+import { ReviewChangesPanel, type ReviewChangeItem } from "../../shared/edit-review";
 import { FieldError } from "../../shared/field-error";
 import { PasswordConfirmModal } from "../../shared/password-confirm-modal";
 
@@ -26,6 +27,8 @@ type Props = { profile: EditableProfile };
 
 const MAX_SKILLS = 10;
 const MAX_LANGUAGES = 10;
+const MAX_ENTRY_NAME_LENGTH = 40;
+const MAX_CERTIFICATION_LENGTH = 60;
 const LANGUAGE_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 
 type SkillRow = { id: string; name: string; level: string };
@@ -46,6 +49,19 @@ function normalizeSkillLevel(value: string) {
   const numeric = Number(digits);
   if (!Number.isFinite(numeric)) return "";
   return String(Math.max(0, Math.min(100, numeric)));
+}
+
+function sanitizeHumanEntry(value: string, maxLength: number) {
+  return value
+    .replace(/[\n\r]/g, " ")
+    .replace(/[^A-Za-zÀ-ÖØ-öø-ÿ .'-]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trimStart()
+    .slice(0, maxLength);
+}
+
+function sanitizeCertificationEntry(value: string) {
+  return sanitizeHumanEntry(value, MAX_CERTIFICATION_LENGTH);
 }
 
 function parseSkillRows(raw: string): SkillRow[] {
@@ -205,6 +221,41 @@ export function CompetenciesForm({ profile }: Props) {
     clearFieldError("skills");
   };
 
+  const updateLanguageRow = (id: string, patch: Partial<LanguageRow>) => {
+    setLanguageRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        return {
+          ...row,
+          ...patch,
+          level:
+            patch.level && LANGUAGE_LEVELS.includes(patch.level)
+              ? patch.level
+              : row.level,
+        };
+      }),
+    );
+    clearFieldError("languages");
+  };
+
+  const removeLanguageRow = (id: string) => {
+    setLanguageRows((prev) => prev.filter((row) => row.id !== id));
+    clearFieldError("languages");
+  };
+
+  const addLanguageRow = () => {
+    setLanguageRows((prev) => [
+      ...prev,
+      {
+        id: buildRowId("lang"),
+        name: "",
+        level: "A1",
+        certification: "",
+      },
+    ]);
+    clearFieldError("languages");
+  };
+
   const requestSave = () => {
     if (!profile.canEditCompetencies) {
       setSubmitMessage(`Proxima edicion: ${formatNextProfileEditDate(profile.nextCompetenciesEditAt)}`);
@@ -276,51 +327,49 @@ export function CompetenciesForm({ profile }: Props) {
 
   return (
     <>
-      <div className="rounded-3xl border border-border bg-card p-10 shadow-sm">
-        <EditStepsHeader
-          currentStep={step}
-          firstTitle="Editar competencias"
-          firstDescription="Gestiona habilidades e idiomas de forma estructurada."
-          secondTitle="Revisar cambios"
-          secondDescription="Verifica el resumen antes de confirmar."
-        />
-
-        {!profile.canEditCompetencies && (
-          <div className="mt-8 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
-            <Badge variant="outline">Restricción activa</Badge>
-            <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
-              Próxima edición: {formatNextProfileEditDate(profile.nextCompetenciesEditAt)}
-            </p>
-          </div>
-        )}
-
+      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
         {step === 1 ? (
-          <div className="mt-10 space-y-12">
+          <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
             {/* Habilidades */}
             <section className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Award className="size-6 text-muted-foreground" />
+                  <Award className="size-5 text-muted-foreground" />
                   <div>
-                    <Label className="text-lg">Habilidades</Label>
+                    <Label className="text-base">Habilidades</Label>
                     <p className="text-sm text-muted-foreground">Máximo 10</p>
                   </div>
                 </div>
                 <Badge variant="outline">{skillRows.length}/{MAX_SKILLS}</Badge>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {skillRows.map((row, idx) => (
-                  <div key={row.id} className="flex gap-4 items-end rounded-2xl border bg-muted/30 p-5">
+                  <div key={row.id} className="flex items-end gap-3 rounded-2xl bg-muted/30 p-4">
                     <div className="flex-1 space-y-2">
                       <Label>Habilidad {idx + 1}</Label>
-                      <Input value={row.name} placeholder="Liderazgo" disabled={!profile.canEditCompetencies}
-                        onChange={(e) => updateSkillRow(row.id, { name: e.target.value })} />
+                      <Input
+                        value={row.name}
+                        placeholder="Liderazgo"
+                        maxLength={MAX_ENTRY_NAME_LENGTH}
+                        disabled={!profile.canEditCompetencies}
+                        onChange={(e) =>
+                          updateSkillRow(row.id, {
+                            name: sanitizeHumanEntry(e.target.value, MAX_ENTRY_NAME_LENGTH),
+                          })
+                        }
+                      />
                     </div>
                     <div className="w-32 space-y-2">
                       <Label>Nivel (%)</Label>
-                      <Input value={row.level} placeholder="85" inputMode="numeric" disabled={!profile.canEditCompetencies}
-                        onChange={(e) => updateSkillRow(row.id, { level: e.target.value })} />
+                      <Input
+                        value={row.level}
+                        placeholder="85"
+                        inputMode="numeric"
+                        maxLength={3}
+                        disabled={!profile.canEditCompetencies}
+                        onChange={(e) => updateSkillRow(row.id, { level: e.target.value })}
+                      />
                     </div>
                     <Button variant="outline" size="icon" onClick={() => removeSkillRow(row.id)} disabled={!profile.canEditCompetencies}>
                       <Trash2 className="size-4" />
@@ -339,24 +388,100 @@ export function CompetenciesForm({ profile }: Props) {
             <section className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Globe className="size-6 text-muted-foreground" />
+                  <Globe className="size-5 text-muted-foreground" />
                   <div>
-                    <Label className="text-lg">Idiomas</Label>
+                    <Label className="text-base">Idiomas</Label>
                     <p className="text-sm text-muted-foreground">Máximo 10</p>
                   </div>
                 </div>
                 <Badge variant="outline">{languageRows.length}/{MAX_LANGUAGES}</Badge>
               </div>
 
-              {/* Similar estructura para languages con Select para nivel */}
-              {/* ... (puedes expandir igual que skills) */}
+              <div className="space-y-3">
+                {languageRows.map((row, idx) => (
+                  <div key={row.id} className="space-y-3 rounded-2xl bg-muted/30 p-4">
+                    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px]">
+                      <div className="space-y-2">
+                        <Label>Idioma {idx + 1}</Label>
+                        <Input
+                          value={row.name}
+                          placeholder="Ingles"
+                          maxLength={MAX_ENTRY_NAME_LENGTH}
+                          disabled={!profile.canEditCompetencies}
+                          onChange={(e) =>
+                            updateLanguageRow(row.id, {
+                              name: sanitizeHumanEntry(e.target.value, MAX_ENTRY_NAME_LENGTH),
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Nivel CEFR</Label>
+                        <Select
+                          value={row.level}
+                          onValueChange={(value) =>
+                            updateLanguageRow(row.id, {
+                              level: value as (typeof LANGUAGE_LEVELS)[number],
+                            })
+                          }
+                          disabled={!profile.canEditCompetencies}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LANGUAGE_LEVELS.map((level) => (
+                              <SelectItem key={level} value={level}>
+                                {level}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-end gap-3">
+                      <div className="flex-1 space-y-2">
+                        <Label>Certificación</Label>
+                        <Input
+                          value={row.certification}
+                          placeholder="IELTS"
+                          maxLength={MAX_CERTIFICATION_LENGTH}
+                          disabled={!profile.canEditCompetencies}
+                          onChange={(e) =>
+                            updateLanguageRow(row.id, {
+                              certification: sanitizeCertificationEntry(e.target.value),
+                            })
+                          }
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removeLanguageRow(row.id)}
+                        disabled={!profile.canEditCompetencies}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button variant="outline" onClick={addLanguageRow} disabled={languageRows.length >= MAX_LANGUAGES || !profile.canEditCompetencies}>
+                <Plus className="mr-2 size-4" /> Agregar idioma
+              </Button>
+              <FieldError message={errors.languages} />
             </section>
           </div>
         ) : (
           <ReviewChangesPanel title="Resumen de cambios en competencias" description="Verifica antes de confirmar." changes={reviewChanges} />
         )}
 
-        <div className="flex justify-end gap-4 pt-10 border-t mt-10">
+        {submitMessage ? <p className="text-sm text-muted-foreground">{submitMessage}</p> : null}
+
+        <div className="mt-8 flex justify-end gap-4">
           {step === 2 ? (
             <>
               <Button variant="outline" onClick={() => setStep(1)}>Volver</Button>
@@ -375,8 +500,11 @@ export function CompetenciesForm({ profile }: Props) {
       <PasswordConfirmModal
         open={confirmOpen}
         title="Confirmar cambios"
-        description="Ingresa tu contraseña actual."
-        policyNotice="Esta sección quedará bloqueada por 3 meses."
+        description="¿Estas seguro de confirmar estos cambios? Ingresa tu contraseña actual para continuar."
+        sectionTitle="Editar competencias"
+        sectionSummary="Gestiona habilidades e idiomas de forma estructurada."
+        policyNotice={`Al confirmar, el proximo cambio de esta seccion se habilitara en 3 meses. Proxima edicion disponible: ${formatNextProfileEditDate(profile.nextCompetenciesEditAt)}.`}
+        confirmLabel="Si, confirmar cambios"
         isPending={isPending}
         errorMessage={confirmError}
         onOpenChange={setConfirmOpen}

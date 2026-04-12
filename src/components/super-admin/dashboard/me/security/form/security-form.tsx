@@ -14,7 +14,6 @@ import {
 
 import { FieldError } from "@/components/super-admin/dashboard/me/shared/field-error";
 import { PasswordConfirmModal } from "@/components/super-admin/dashboard/me/shared/password-confirm-modal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,20 +126,11 @@ export function SecurityForm({ profile }: Props) {
 
   return (
     <>
-      <div className="space-y-6 rounded-2xl border border-border bg-card p-6">
+      <div className="space-y-6 rounded-2xl border border-border/60 bg-card p-6">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Credenciales de acceso</h2>
           <p className="text-sm text-muted-foreground">Puedes cambiar usuario y contrasena cada 3 meses.</p>
         </div>
-
-        {!profile.canChangeCredentials ? (
-          <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
-            <Badge variant="outline">Anuncio</Badge>
-            <p className="text-sm text-amber-700 dark:text-amber-400">
-              Esta seccion se puede editar cada 3 meses. Proximo cambio disponible: {formatNextDate(profile.nextCredentialChangeAt)}.
-            </p>
-          </div>
-        ) : null}
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div className="space-y-2">
@@ -149,9 +139,14 @@ export function SecurityForm({ profile }: Props) {
               id="me-security-username"
               value={form.username}
               placeholder="usuario.admin"
+              minLength={3}
+              maxLength={60}
               disabled={!profile.canChangeCredentials}
               onChange={(event) => {
-                setForm((prev) => ({ ...prev, username: event.target.value.toLowerCase().trimStart() }));
+                setForm((prev) => ({
+                  ...prev,
+                  username: event.target.value.toLowerCase().trimStart().slice(0, 60),
+                }));
                 clearFieldError("username");
               }}
             />
@@ -164,9 +159,11 @@ export function SecurityForm({ profile }: Props) {
               id="me-security-new-password"
               value={form.newPassword}
               placeholder="Opcional si solo cambias usuario"
+              minLength={8}
+              maxLength={72}
               disabled={!profile.canChangeCredentials}
               onChange={(event) => {
-                setForm((prev) => ({ ...prev, newPassword: event.target.value }));
+                setForm((prev) => ({ ...prev, newPassword: event.target.value.slice(0, 72) }));
                 clearFieldError("newPassword");
               }}
             />
@@ -179,9 +176,11 @@ export function SecurityForm({ profile }: Props) {
               id="me-security-new-password-confirm"
               value={form.newPasswordConfirm}
               placeholder="Repite la nueva contrasena"
+              minLength={8}
+              maxLength={72}
               disabled={!profile.canChangeCredentials}
               onChange={(event) => {
-                setForm((prev) => ({ ...prev, newPasswordConfirm: event.target.value }));
+                setForm((prev) => ({ ...prev, newPasswordConfirm: event.target.value.slice(0, 72) }));
                 clearFieldError("newPasswordConfirm");
               }}
             />
@@ -191,7 +190,7 @@ export function SecurityForm({ profile }: Props) {
 
         {submitMessage ? <p className="text-sm text-muted-foreground">{submitMessage}</p> : null}
 
-        <div className="flex justify-end border-t border-border pt-4">
+        <div className="flex justify-end pt-1">
           <Button onClick={requestSave} disabled={isPending || !profile.canChangeCredentials}>
             Guardar cambios
           </Button>
@@ -201,8 +200,11 @@ export function SecurityForm({ profile }: Props) {
       <PasswordConfirmModal
         open={confirmOpen}
         title="Confirmar cambios de seguridad"
-        description="Ingresa tu contrasena actual para aplicar los cambios."
-        policyNotice="Al confirmar, esta seccion quedara bloqueada durante 3 meses."
+        description="¿Estas seguro de confirmar estos cambios? Ingresa tu contrasena actual para continuar."
+        sectionTitle="Editar seguridad"
+        sectionSummary="Protege tu cuenta actualizando usuario y contrasena."
+        policyNotice={`Al confirmar, el proximo cambio de esta seccion se habilitara en 3 meses. Proximo cambio disponible: ${formatNextDate(profile.nextCredentialChangeAt)}.`}
+        confirmLabel="Si, confirmar cambios"
         isPending={isPending}
         errorMessage={confirmError}
         onOpenChange={setConfirmOpen}

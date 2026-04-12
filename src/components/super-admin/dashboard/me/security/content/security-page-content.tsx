@@ -15,16 +15,11 @@ export async function SecurityPageContent() {
   }
 
   return (
-    <div className="space-y-10">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-semibold tracking-tight">Seguridad</h1>
-        <p className="text-lg text-muted-foreground">
-          Protege tu cuenta cambiando usuario y contraseña.
-        </p>
+    <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <EditNav active="/dashboard/me/security" nextAvailableAt={result.data.nextCredentialChangeAt} />
+        <SecurityForm profile={result.data} />
       </div>
-
-      <EditNav active="/dashboard/me/security" />
-      <SecurityForm profile={result.data} />
     </div>
   );
 }

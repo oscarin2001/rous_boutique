@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Globe } from "lucide-react";
+import { Award, Globe, type LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -29,7 +29,7 @@ function getLevelBadge(level: string) {
   return "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400";
 }
 
-function SectionHeader({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle: string }) {
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: string; subtitle: string }) {
   return (
     <div className="flex items-center gap-4">
       <div className="rounded-2xl border border-border/70 p-3 bg-card">
@@ -47,7 +47,7 @@ type Props = { skills: Skill[]; languages: Language[] };
 
 export function SkillsLanguagesPanel({ skills, languages }: Props) {
   const sortedSkills = [...skills].sort((a, b) => b.level - a.level).slice(0, 8);
-  const visibleLanguages = languages.slice(0, 8);
+  const visibleLanguages = languages;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -90,8 +90,8 @@ export function SkillsLanguagesPanel({ skills, languages }: Props) {
 
         {visibleLanguages.length > 0 ? (
           <div className="mt-8 space-y-6">
-            {visibleLanguages.map((lang) => (
-              <div key={lang.code} className="space-y-3">
+            {visibleLanguages.map((lang, index) => (
+              <div key={`${lang.code}-${lang.name}-${index}`} className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{lang.name}</span>
                   <Badge variant="secondary" className={getLevelBadge(lang.level)}>

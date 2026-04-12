@@ -15,16 +15,11 @@ export async function PersonalPageContent() {
   }
 
   return (
-    <div className="space-y-10">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-semibold tracking-tight">Datos personales</h1>
-        <p className="text-lg text-muted-foreground">
-          Actualiza tu información básica y resumen profesional.
-        </p>
+    <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <EditNav active="/dashboard/me/personal" nextAvailableAt={result.data.nextPersonalEditAt} />
+        <PersonalForm profile={result.data} />
       </div>
-
-      <EditNav active="/dashboard/me/personal" />
-      <PersonalForm profile={result.data} />
     </div>
   );
 }

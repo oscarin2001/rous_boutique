@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { toast } from "sonner";
 
@@ -12,12 +12,13 @@ import {
   sanitizePhoneInput,
   sanitizeProfessionInput,
   truncateInput,
+  uploadSuperAdminMePhotoAction,
   updateSuperAdminMePersonalAction,
   validatePersonalInput,
   type EditableProfile,
 } from "@/actions/super-admin/me";
 
-import { Badge } from "@/components/ui/badge";
+import { InlineFieldError } from "@/components/super-admin/dashboard/shared/forms/inline-feedback";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,6 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { ProfileAvatarUploader } from "../../content/profile-avatar-uploader";
 import {
-  EditStepsHeader,
   ReviewChangesPanel,
   type ReviewChangeItem,
 } from "../../shared/edit-review";
@@ -132,12 +132,16 @@ function buildReviewChanges(profile: EditableProfile, form: PersonalDraft): Revi
 export function PersonalForm({ profile }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isUploadingPhoto, startUploadTransition] = useTransition();
   const [step, setStep] = useState<1 | 2>(1);
   const [reviewChanges, setReviewChanges] = useState<ReviewChangeItem[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState(profile.photoUrl);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [errors, setErrors] = useState<PersonalErrors>({});
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState<PersonalDraft>({
     firstName: profile.firstName,
@@ -162,6 +166,25 @@ export function PersonalForm({ profile }: Props) {
 
   const clearFieldError = (field: keyof PersonalErrors) => {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handlePhotoChange = (file: File) => {
+    if (!profile.canEditPersonal) return;
+
+    setPhotoError(null);
+    startUploadTransition(async () => {
+      const result = await uploadSuperAdminMePhotoAction(file);
+      if (!result.success || !result.data) {
+        const error = result.error ?? "No se pudo actualizar la foto de perfil";
+        setPhotoError(error);
+        toast.error(error);
+        return;
+      }
+
+      setPhotoUrl(result.data.photoUrl);
+      toast.success("Foto de perfil actualizada");
+      router.refresh();
+    });
   };
 
   const requestSave = () => {
@@ -237,33 +260,38 @@ export function PersonalForm({ profile }: Props) {
 
   return (
     <>
-      <div className="rounded-3xl border border-border bg-card p-10 shadow-sm">
-        <EditStepsHeader
-          currentStep={step}
-          firstTitle="Editar datos personales"
-          firstDescription="Actualiza tu información básica y descripción profesional."
-          secondTitle="Revisar cambios"
-          secondDescription="Verifica los cambios antes de confirmar. Esta sección quedará bloqueada por 3 meses."
-        />
-
-        {!profile.canEditPersonal && (
-          <div className="mt-8 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
-            <Badge variant="outline" className="mb-3">Restricción temporal</Badge>
-            <p className="text-sm text-amber-700 dark:text-amber-400">
-              Podrás editar nuevamente a partir del:{" "}
-              <span className="font-medium">{formatNextProfileEditDate(profile.nextPersonalEditAt)}</span>
-            </p>
-          </div>
-        )}
-
+      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
         {step === 1 ? (
-          <div className="mt-10 space-y-10">
+          <div className="space-y-8">
             {/* Avatar Section */}
-            <div className="flex items-center gap-6 rounded-2xl bg-muted/40 p-6">
-              <ProfileAvatarUploader initials={initials} photoUrl={profile.photoUrl || null} className="size-24" />
-              <div>
+            <div className="flex items-center gap-6 rounded-2xl bg-muted/35 p-6">
+              <ProfileAvatarUploader initials={initials} photoUrl={photoUrl || null} className="size-24" />
+              <div className="space-y-2">
                 <p className="font-medium">Foto de perfil</p>
-                <p className="text-sm text-muted-foreground">La foto se actualizará en todo el sistema.</p>
+                <p className="text-sm text-muted-foreground">Solo puedes cambiar la foto desde esta sección de edición.</p>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={!profile.canEditPersonal || isUploadingPhoto}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.currentTarget.value = "";
+                    if (!file) return;
+                    handlePhotoChange(file);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!profile.canEditPersonal || isUploadingPhoto}
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  {isUploadingPhoto ? "Subiendo..." : "Cambiar foto"}
+                </Button>
+                <InlineFieldError message={photoError} />
               </div>
             </div>
 
@@ -274,6 +302,8 @@ export function PersonalForm({ profile }: Props) {
                 <Input
                   value={form.firstName}
                   placeholder="Ej. Juan"
+                  minLength={2}
+                  maxLength={30}
                   disabled={!profile.canEditPersonal}
                   onChange={(e) => {
                     setForm((p) => ({ ...p, firstName: sanitizeHumanNameInput(e.target.value) }));
@@ -288,6 +318,8 @@ export function PersonalForm({ profile }: Props) {
                 <Input
                   value={form.lastName}
                   placeholder="Ej. Pérez"
+                  minLength={2}
+                  maxLength={30}
                   disabled={!profile.canEditPersonal}
                   onChange={(e) => {
                     setForm((p) => ({ ...p, lastName: sanitizeHumanNameInput(e.target.value) }));
@@ -313,14 +345,14 @@ export function PersonalForm({ profile }: Props) {
 
               <div className="space-y-2">
                 <Label>Teléfono (+591)</Label>
-                <div className="flex rounded-lg border focus-within:border-primary">
-                  <span className="flex items-center border-r px-4 text-muted-foreground">+591</span>
+                <div className="flex rounded-lg bg-muted/35 focus-within:ring-1 focus-within:ring-primary/25">
+                  <span className="flex items-center px-4 text-muted-foreground">+591</span>
                   <Input
                     value={form.phone}
                     inputMode="numeric"
                     maxLength={8}
                     placeholder="71234567"
-                    className="border-0"
+                    className="border-0 bg-transparent"
                     disabled={!profile.canEditPersonal}
                     onChange={(e) => {
                       setForm((p) => ({ ...p, phone: sanitizePhoneInput(e.target.value) }));
@@ -336,6 +368,8 @@ export function PersonalForm({ profile }: Props) {
                 <Input
                   value={form.ci}
                   placeholder="1234567 LP"
+                  minLength={5}
+                  maxLength={20}
                   disabled={!profile.canEditPersonal}
                   onChange={(e) => {
                     setForm((p) => ({ ...p, ci: sanitizeCiInput(e.target.value) }));
@@ -350,6 +384,7 @@ export function PersonalForm({ profile }: Props) {
                 <Input
                   value={form.profession}
                   placeholder="Ej. Ingeniero de Software"
+                  maxLength={80}
                   disabled={!profile.canEditPersonal}
                   onChange={(e) => {
                     setForm((p) => ({ ...p, profession: sanitizeProfessionInput(e.target.value) }));
@@ -366,6 +401,7 @@ export function PersonalForm({ profile }: Props) {
                 rows={6}
                 value={form.aboutMe}
                 placeholder="Breve resumen profesional..."
+                maxLength={600}
                 disabled={!profile.canEditPersonal}
                 onChange={(e) => {
                   setForm((p) => ({ ...p, aboutMe: truncateInput(e.target.value, 600) }));
@@ -385,7 +421,7 @@ export function PersonalForm({ profile }: Props) {
 
         {submitMessage && <p className="text-sm text-amber-600">{submitMessage}</p>}
 
-        <div className="flex justify-end gap-3 border-t pt-8 mt-8">
+        <div className="mt-8 flex justify-end gap-3">
           {step === 2 ? (
             <>
               <Button variant="outline" onClick={() => setStep(1)}>
@@ -410,8 +446,11 @@ export function PersonalForm({ profile }: Props) {
       <PasswordConfirmModal
         open={confirmOpen}
         title="Confirmar actualización"
-        description="Ingresa tu contraseña actual para guardar los cambios."
-        policyNotice="Esta sección quedará bloqueada durante 3 meses."
+        description="¿Estas seguro de confirmar estos cambios? Ingresa tu contraseña actual para continuar."
+        sectionTitle="Editar datos personales"
+        sectionSummary="Actualiza tu información básica y descripción profesional."
+        policyNotice={`Al confirmar, el proximo cambio de esta seccion se habilitara en 3 meses. Proxima edicion disponible: ${formatNextProfileEditDate(profile.nextPersonalEditAt)}.`}
+        confirmLabel="Si, confirmar cambios"
         isPending={isPending}
         errorMessage={confirmError}
         onOpenChange={setConfirmOpen}

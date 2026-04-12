@@ -5,7 +5,6 @@ import {
   ClipboardList,
   LayoutDashboard,
   Package,
-  Settings,
   ShieldCheck,
   Store,
   Truck,
@@ -114,11 +113,6 @@ export const superAdminNavGroups: NavGroup[] = [
         title: "Usuarios del Sistema",
         url: "/dashboard/users",
         icon: Users,
-      },
-      {
-        title: "Configuraciones",
-        url: "/dashboard/settings",
-        icon: Settings,
       },
       {
         title: "Permisos y Roles",

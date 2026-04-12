@@ -14,8 +14,8 @@ export function ProfileIdentityCard({ fullName, roleCode, initials, photoUrl }: 
         <ProfileAvatarUploader initials={initials} photoUrl={photoUrl} className="size-24" />
 
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-3xl font-semibold tracking-tight">{fullName}</h1>
-          <p className="mt-1 text-lg text-muted-foreground font-medium">{roleCode}</p>
+          <h1 className="truncate text-2xl font-semibold tracking-tight">{fullName}</h1>
+          <p className="mt-1 text-sm text-muted-foreground font-medium">{roleCode}</p>
         </div>
       </div>
     </div>

@@ -24,9 +24,15 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
   const [openSection, setOpenSection] = useState<
     "appearance" | "regional" | "contingency" | null
   >(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const toggleSection = (section: "appearance" | "regional" | "contingency") => {
     setOpenSection(openSection === section ? null : section);
+  };
+
+  const updateSystem = (updater: (prev: SystemForm) => SystemForm) => {
+    setSystem(updater);
+    setHasChanges(true);
   };
 
   return (
@@ -37,7 +43,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
           <Monitor className="size-4 text-primary" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold">Configuración del Sistema</h2>
+          <h2 className="text-base font-semibold">Configuración del Sistema</h2>
           <p className="text-sm text-muted-foreground">
             Gestiona la apariencia, preferencias regionales y datos de contingencia
           </p>
@@ -51,7 +57,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
           onClick={() => toggleSection("appearance")}
           className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors active:bg-muted"
         >
-          <h3 className="font-medium">Apariencia</h3>
+          <h3 className="text-sm font-medium">Apariencia</h3>
           <ChevronDown
             className={`size-4 transition-transform duration-200 ${
               openSection === "appearance" ? "rotate-180" : ""
@@ -70,7 +76,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setSystem((v) => ({ ...v, theme: option.value }))}
+                    onClick={() => updateSystem((v) => ({ ...v, theme: option.value }))}
                     className={`flex flex-col items-center justify-center rounded-lg bg-background/70 py-4 text-xs transition-all ${
                       isSelected
                         ? "bg-primary/10 ring-1 ring-primary/30"
@@ -94,7 +100,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
           onClick={() => toggleSection("regional")}
           className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors active:bg-muted"
         >
-          <h3 className="font-medium">Preferencias Regionales</h3>
+          <h3 className="text-sm font-medium">Preferencias Regionales</h3>
           <ChevronDown
             className={`size-4 transition-transform duration-200 ${
               openSection === "regional" ? "rotate-180" : ""
@@ -109,7 +115,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Idioma</Label>
                 <Select 
                   value={system.language} 
-                  onValueChange={(v) => setSystem((s) => ({ ...s, language: v as SystemForm["language"] }))}
+                  onValueChange={(v) => updateSystem((s) => ({ ...s, language: v as SystemForm["language"] }))}
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue />
@@ -127,7 +133,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Zona horaria</Label>
                 <Select 
                   value={system.timezone} 
-                  onValueChange={(v) => setSystem((s) => ({ ...s, timezone: v ?? "America/La_Paz" }))}
+                  onValueChange={(v) => updateSystem((s) => ({ ...s, timezone: v ?? "America/La_Paz" }))}
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue />
@@ -144,7 +150,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Formato de fecha</Label>
                 <Select 
                   value={system.dateFormat} 
-                  onValueChange={(v) => setSystem((s) => ({ ...s, dateFormat: v as SystemForm["dateFormat"] }))}
+                  onValueChange={(v) => updateSystem((s) => ({ ...s, dateFormat: v as SystemForm["dateFormat"] }))}
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue />
@@ -161,7 +167,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Formato de hora</Label>
                 <Select 
                   value={system.timeFormat} 
-                  onValueChange={(v) => setSystem((s) => ({ ...s, timeFormat: v as SystemForm["timeFormat"] }))}
+                  onValueChange={(v) => updateSystem((s) => ({ ...s, timeFormat: v as SystemForm["timeFormat"] }))}
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue />
@@ -186,7 +192,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Sesión expira en</Label>
                 <Select 
                   value={String(system.sessionTtlMinutes)} 
-                  onValueChange={(v) => setSystem((s) => ({ ...s, sessionTtlMinutes: Number(v) }))}
+                  onValueChange={(v) => updateSystem((s) => ({ ...s, sessionTtlMinutes: Number(v) }))}
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue />
@@ -212,7 +218,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
         >
           <div className="flex items-center gap-2">
             <ShieldAlert className="size-4 text-amber-500" />
-            <h3 className="font-medium">Contingencia y Firma</h3>
+            <h3 className="text-sm font-medium">Contingencia y Firma</h3>
           </div>
           <ChevronDown
             className={`size-4 transition-transform duration-200 ${
@@ -228,7 +234,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Teléfono alterno</Label>
                 <Input
                   value={system.emergencyPhone}
-                  onChange={(e) => setSystem((v) => ({ 
+                  onChange={(e) => updateSystem((v) => ({ 
                     ...v, 
                     emergencyPhone: e.target.value.replace(/\D/g, "").slice(0, 8) 
                   }))}
@@ -241,7 +247,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Contacto de emergencia</Label>
                 <Input
                   value={system.emergencyContactName}
-                  onChange={(e) => setSystem((v) => ({ ...v, emergencyContactName: e.target.value }))}
+                  onChange={(e) => updateSystem((v) => ({ ...v, emergencyContactName: e.target.value }))}
                   className="h-9"
                 />
               </div>
@@ -250,7 +256,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Teléfono emergencia</Label>
                 <Input
                   value={system.emergencyContactPhone}
-                  onChange={(e) => setSystem((v) => ({ 
+                  onChange={(e) => updateSystem((v) => ({ 
                     ...v, 
                     emergencyContactPhone: e.target.value.replace(/\D/g, "").slice(0, 8) 
                   }))}
@@ -263,7 +269,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Nombre en firma</Label>
                 <Input
                   value={system.signatureDisplayName}
-                  onChange={(e) => setSystem((v) => ({ ...v, signatureDisplayName: e.target.value }))}
+                  onChange={(e) => updateSystem((v) => ({ ...v, signatureDisplayName: e.target.value }))}
                   className="h-9"
                 />
               </div>
@@ -272,7 +278,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
                 <Label className="text-xs">Cargo en firma</Label>
                 <Input
                   value={system.signatureTitle}
-                  onChange={(e) => setSystem((v) => ({ ...v, signatureTitle: e.target.value }))}
+                  onChange={(e) => updateSystem((v) => ({ ...v, signatureTitle: e.target.value }))}
                   className="h-9"
                 />
               </div>
@@ -283,7 +289,7 @@ export function SystemTab({ system, isPending, setSystem, onSave }: Props) {
 
       {/* Botón Guardar */}
       <div className="flex justify-end pt-4">
-        <Button onClick={onSave} disabled={isPending} size="sm" className="gap-2 min-w-[140px]">
+        <Button onClick={onSave} disabled={isPending || !hasChanges} size="sm" className="gap-2 min-w-[140px]">
           <Save className="size-4" />
           Guardar cambios
         </Button>

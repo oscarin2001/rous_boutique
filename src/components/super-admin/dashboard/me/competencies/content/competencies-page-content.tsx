@@ -15,16 +15,11 @@ export async function CompetenciesPageContent() {
   }
 
   return (
-    <div className="space-y-10">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-semibold tracking-tight">Competencias</h1>
-        <p className="text-lg text-muted-foreground">
-          Gestiona tus habilidades técnicas e idiomas.
-        </p>
+    <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <EditNav active="/dashboard/me/competencies" nextAvailableAt={result.data.nextCompetenciesEditAt} />
+        <CompetenciesForm profile={result.data} />
       </div>
-
-      <EditNav active="/dashboard/me/competencies" />
-      <CompetenciesForm profile={result.data} />
     </div>
   );
 }

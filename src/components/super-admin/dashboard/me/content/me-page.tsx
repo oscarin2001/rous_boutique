@@ -1,8 +1,4 @@
-import { UserRound } from "lucide-react";
-
 import { redirect } from "next/navigation";
-
-import { PageHeaderCard } from "@/components/super-admin/dashboard/shared/page-header-card";
 
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -65,13 +61,6 @@ export async function MePage() {
 
   return (
     <div className="w-full min-w-0 space-y-8">
-      <PageHeaderCard
-        icon={UserRound}
-        eyebrow="Perfil"
-        title="Mi perfil"
-        description="Vista integral de tu información profesional con accesos directos a edición."
-      />
-
       <div className="grid w-full min-w-0 gap-8 lg:grid-cols-[360px_minmax(0,1fr)]">
         {/* Sidebar */}
         <aside className="min-w-0 space-y-6">
