@@ -10,9 +10,9 @@ type Props = {
 
 export function ProfileAvatarUploader({ initials, photoUrl, className }: Props) {
   return (
-    <Avatar className={className}>
-      {photoUrl ? <AvatarImage src={photoUrl} alt="Foto de perfil" /> : null}
-      <AvatarFallback className="bg-primary text-primary-foreground text-xl font-semibold">
+    <Avatar className={`ring-1 ring-border/60 ${className ?? ""}`}>
+      {photoUrl && <AvatarImage src={photoUrl} alt={`Foto de ${initials}`} />}
+      <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-2xl font-semibold tracking-tighter">
         {initials}
       </AvatarFallback>
     </Avatar>

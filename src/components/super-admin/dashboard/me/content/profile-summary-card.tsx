@@ -8,25 +8,23 @@ type Props = {
 
 export function ProfileSummaryCard({ aboutMe }: Props) {
   return (
-    <section className="min-w-0 rounded-2xl border border-border/50 bg-card p-6">
-      <div className="min-w-0 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">Resumen de perfil</h2>
-          <Link
-            href="/dashboard/me/personal"
-            className="inline-flex size-9 items-center justify-center rounded-lg bg-muted/40 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-          >
-            <PencilLine className="size-4" />
-            <span className="sr-only">Editar datos personales</span>
-          </Link>
-        </div>
-
-        <div className="min-w-0 rounded-xl border border-border/40 bg-muted/20 p-4">
-          <p className="max-h-32 overflow-y-auto whitespace-pre-wrap break-all pr-1 text-sm leading-relaxed text-muted-foreground">
-            {aboutMe || "No se ha proporcionado una descripcion del perfil."}
-          </p>
-        </div>
+    <div className="min-w-0 overflow-hidden rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-semibold tracking-tight">Resumen profesional</h2>
+        <Link
+          href="/dashboard/me/personal"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <PencilLine className="size-4" />
+          Editar
+        </Link>
       </div>
-    </section>
+
+      <div className="min-w-0 rounded-2xl bg-muted/40 p-6 min-h-[140px]">
+        <p className="max-w-full break-all whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+          {aboutMe || "Aún no has agregado una descripción profesional."}
+        </p>
+      </div>
+    </div>
   );
 }

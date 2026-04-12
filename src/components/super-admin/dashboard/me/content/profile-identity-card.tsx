@@ -1,4 +1,4 @@
-import { ProfileAvatarUploader } from "@/components/super-admin/dashboard/me/content/profile-avatar-uploader";
+import { ProfileAvatarUploader } from "./profile-avatar-uploader";
 
 type Props = {
   fullName: string;
@@ -9,14 +9,15 @@ type Props = {
 
 export function ProfileIdentityCard({ fullName, roleCode, initials, photoUrl }: Props) {
   return (
-    <section className="rounded-2xl border border-border/50 bg-card p-6">
-      <div className="flex items-center gap-4">
-        <ProfileAvatarUploader initials={initials} photoUrl={photoUrl} className="size-20" />
-        <div className="min-w-0">
-          <h2 className="truncate text-2xl font-semibold">{fullName}</h2>
-          <p className="text-sm text-muted-foreground">{roleCode}</p>
+    <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+      <div className="flex items-center gap-6">
+        <ProfileAvatarUploader initials={initials} photoUrl={photoUrl} className="size-24" />
+
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-3xl font-semibold tracking-tight">{fullName}</h1>
+          <p className="mt-1 text-lg text-muted-foreground font-medium">{roleCode}</p>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
