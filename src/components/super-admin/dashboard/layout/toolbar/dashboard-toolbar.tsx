@@ -216,7 +216,7 @@ export function DashboardToolbar() {
   };
 
   return (
-    <header className="sticky top-2 z-10 mx-2 flex h-14 shrink-0 items-center gap-2 rounded-xl border border-border/70 bg-card/90 px-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    <header className="sa-toolbar sticky top-2 z-10 mx-2 flex h-14 shrink-0 items-center gap-2 rounded-xl border px-4 backdrop-blur-md">
       <SidebarTrigger className="-ml-1" />
       <Breadcrumb className="hidden md:flex">
         <BreadcrumbList>

@@ -33,7 +33,7 @@ export function AppSidebar({
   defaultBranchId,
 }: AppSidebarProps) {
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar variant="inset" collapsible="icon" className="sa-sidebar-admin">
       <SidebarHeader>
         <BranchSwitcher
           branches={branches}

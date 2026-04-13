@@ -70,7 +70,7 @@ export function NavUser({
           <DropdownMenuContent
             side={isMobile ? "bottom" : "right"}
             align="end"
-            className="w-56"
+            className="sa-user-menu w-56"
           >
             <div className="flex items-center gap-2 px-2 py-1.5">
               <Avatar className="size-8">

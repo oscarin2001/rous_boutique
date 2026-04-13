@@ -28,7 +28,7 @@ export function BranchSwitcher({
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton size="lg" className="pointer-events-none">
-          <div className="overflow-hidden rounded-md bg-background p-0.5">
+          <div className="overflow-hidden rounded-md bg-sidebar-accent/65 p-0.5 ring-1 ring-sidebar-border/70">
             <Image
               src="/branding/logo-rous-boutique.jpg"
               alt="Logo de Rous Boutique"
