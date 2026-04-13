@@ -2,9 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { Bell, Languages, Maximize, MessageSquare, Minimize, Moon, Sun } from "lucide-react";
+import { Bell, Maximize, MessageSquare, Minimize, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { toast } from "sonner";
 
 import { usePathname, useRouter } from "next/navigation";
 
@@ -12,7 +11,6 @@ import {
   getSuperAdminToolbarLanguageAction,
   getSuperAdminToolbarNotificationsAction,
   markSuperAdminToolbarNotificationsReadAction,
-  updateSuperAdminToolbarLanguageAction,
 } from "@/actions/super-admin/user-settings/actions";
 
 import { Badge } from "@/components/ui/badge";
@@ -73,29 +71,21 @@ type ToolbarNotice = {
   lastConnectionAt: string | null;
 };
 
-type ToolbarLanguage = "es" | "en" | "pt" | "fr";
+type ToolbarLanguage = "es";
 
 const NOTIFICATIONS_POLL_INTERVAL_MS = 120_000;
-
-const languageOptions: Array<{ value: ToolbarLanguage; label: string }> = [
-  { value: "es", label: "Espanol" },
-  { value: "en", label: "English" },
-  { value: "pt", label: "Portugues" },
-  { value: "fr", label: "Francais" },
-];
 
 export function DashboardToolbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [, startTransition] = useTransition();
-  const [language, setLanguage] = useState<ToolbarLanguage>("es");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notices, setNotices] = useState<ToolbarNotice[]>([]);
-  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
   const [mounted, setMounted] = useState(false);
   const notificationsRequestInFlightRef = useRef(false);
+  const language: ToolbarLanguage = "es";
   const breadcrumbs = useMemo(() => buildBreadcrumbs(pathname, language), [pathname, language]);
 
   useEffect(() => {
@@ -103,8 +93,8 @@ export function DashboardToolbar() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
+    document.documentElement.lang = "es";
+  }, []);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -126,10 +116,7 @@ export function DashboardToolbar() {
 
   useEffect(() => {
     startTransition(async () => {
-      const result = await getSuperAdminToolbarLanguageAction();
-      if (result.success && result.data) {
-        setLanguage(result.data.language);
-      }
+      await getSuperAdminToolbarLanguageAction();
     });
   }, []);
 
@@ -201,22 +188,8 @@ export function DashboardToolbar() {
     await document.documentElement.requestFullscreen();
   };
 
-  const onChangeLanguage = (next: ToolbarLanguage) => {
-    if (next === language || isSavingLanguage) return;
-
-    setLanguage(next);
-    setIsSavingLanguage(true);
-    startTransition(async () => {
-      const result = await updateSuperAdminToolbarLanguageAction(next);
-      setIsSavingLanguage(false);
-      if (!result.success) {
-        toast.error(result.error ?? "No se pudo actualizar el idioma");
-      }
-    });
-  };
-
   return (
-    <header className="sa-toolbar sticky top-2 z-10 mx-2 flex h-14 shrink-0 items-center gap-2 rounded-xl border px-4 backdrop-blur-md">
+    <header className="sa-toolbar sticky top-2 z-10 mx-2 flex h-14 shrink-0 items-center gap-2 rounded-xl border px-4">
       <SidebarTrigger className="-ml-1" />
       <Breadcrumb className="hidden md:flex">
         <BreadcrumbList>
@@ -281,21 +254,6 @@ export function DashboardToolbar() {
           {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
           <span className="sr-only">Pantalla completa</span>
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="gap-1.5" />}>
-            <Languages className="size-4" />
-            {language.toUpperCase()}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Idioma</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {languageOptions.map((item) => (
-              <DropdownMenuItem key={item.value} onClick={() => onChangeLanguage(item.value)}>
-                {item.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   );

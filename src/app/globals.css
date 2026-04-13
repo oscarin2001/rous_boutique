@@ -261,25 +261,25 @@ body {
 }
 
 .sa-sidebar-admin [data-slot="sidebar-inner"] {
-  border: 1px solid hsl(var(--sidebar-border));
-  border-radius: calc(var(--radius) + 2px);
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
 }
 
-.sa-sidebar-admin [data-sidebar="menu-sub"] {
-  position: relative;
-  border-left-width: 0;
-}
-
-.sa-sidebar-admin [data-sidebar="menu-sub"]::before {
+.sa-sidebar-admin [data-slot="sidebar-container"]::after {
   content: "";
   position: absolute;
-  left: 0.55rem;
-  top: 0.32rem;
-  bottom: 0.32rem;
-  width: 2px;
+  top: 0.75rem;
+  right: 0;
+  bottom: 0.75rem;
+  width: 1px;
   border-radius: 999px;
-  background-color: hsl(var(--sidebar-foreground) / 0.2);
+  background-color: hsl(var(--sidebar-border));
+  pointer-events: none;
+}
+
+.sa-sidebar-admin [data-sidebar="menu-sub"] {
+  border-left-width: 0;
 }
 
 .sa-sidebar-admin :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"], [data-sidebar="group-action"], [data-sidebar="menu-action"]):hover {
@@ -317,17 +317,12 @@ body {
   border-left-color: transparent;
 }
 
-.dark .sa-sidebar-admin [data-sidebar="menu-sub"]::before {
-  background-color: hsl(var(--sidebar-foreground) / 0.24);
-}
-
 /* Neutral toolbar surface tuned for white pages (light) and stronger gray in dark */
 .sa-toolbar {
-  border-color: hsl(0 0% 78% / 0.96);
-  background-color: hsl(0 0% 92% / 0.92);
-  box-shadow:
-    0 10px 24px hsl(0 0% 10% / 0.08),
-    0 1px 0 hsl(0 0% 100% / 0.7) inset;
+  border-color: hsl(0 0% 78% / 1);
+  background-color: hsl(0 0% 92%);
+  box-shadow: none;
+  background-clip: padding-box;
 }
 
 .sa-toolbar [data-slot="breadcrumb-list"] {
@@ -336,7 +331,7 @@ body {
 
 .sa-toolbar [data-slot="button"] {
   border-color: hsl(0 0% 76%);
-  background-color: hsl(0 0% 96% / 0.9);
+  background-color: hsl(0 0% 96%);
 }
 
 .sa-toolbar [data-slot="button"]:hover {
@@ -345,7 +340,7 @@ body {
 
 .dark .sa-toolbar {
   border-color: hsl(0 0% 27% / 0.96);
-  background-color: hsl(0 0% 11% / 0.92);
+  background-color: hsl(0 0% 11% / 0.98);
   box-shadow:
     0 12px 28px hsl(0 0% 0% / 0.42),
     0 1px 0 hsl(0 0% 22% / 0.9) inset;
@@ -357,7 +352,7 @@ body {
 
 .dark .sa-toolbar [data-slot="button"] {
   border-color: hsl(0 0% 32%);
-  background-color: hsl(0 0% 17% / 0.88);
+  background-color: hsl(0 0% 17% / 0.96);
 }
 
 .dark .sa-toolbar [data-slot="button"]:hover {

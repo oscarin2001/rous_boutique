@@ -9,49 +9,62 @@ import { updateSystemSchema, type UpdateSystemInput } from "../schemas/preferenc
 
 type ToolbarLanguage = "es" | "en" | "pt" | "fr";
 
-const TOOLBAR_LANGUAGES = new Set<ToolbarLanguage>(["es", "en", "pt", "fr"]);
+const TOOLBAR_LANGUAGES = new Set<ToolbarLanguage>(["es"]);
 
 export async function getSuperAdminToolbarLanguageAction() {
-  const session = await ensureSuperAdminSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  try {
+    const session = await ensureSuperAdminSession();
+    if (!session) return { success: false, error: "No autorizado" };
 
-  const settings = await getOrCreateEmployeeSettings(session.employeeId);
+    const settings = await getOrCreateEmployeeSettings(session.employeeId);
 
-  const language = TOOLBAR_LANGUAGES.has(settings.language as ToolbarLanguage)
-    ? (settings.language as ToolbarLanguage)
-    : "es";
+    if (settings.language !== "es") {
+      await prisma.employeeSettings.update({
+        where: { employeeId: session.employeeId },
+        data: { language: "es" },
+      });
+    }
 
-  return { success: true, data: { language } };
+    return { success: true, data: { language: "es" as const } };
+  } catch (error) {
+    console.error("Error getting toolbar language:", error);
+    return { success: false, error: "Error interno del servidor" };
+  }
 }
 
 export async function updateSuperAdminToolbarLanguageAction(language: ToolbarLanguage) {
-  const session = await ensureSuperAdminSession();
-  if (!session) return { success: false, error: "No autorizado" };
+  try {
+    const session = await ensureSuperAdminSession();
+    if (!session) return { success: false, error: "No autorizado" };
 
-  if (!TOOLBAR_LANGUAGES.has(language)) return { success: false, error: "Idioma invalido" };
+    if (!TOOLBAR_LANGUAGES.has(language)) return { success: false, error: "Idioma invalido" };
 
-  const existing = await getOrCreateEmployeeSettings(session.employeeId);
-  if (existing.language === language) return { success: true };
+    const existing = await getOrCreateEmployeeSettings(session.employeeId);
+    if (existing.language === language) return { success: true };
 
-  await prisma.$transaction(async (tx) => {
-    await tx.employeeSettings.update({
-      where: { employeeId: session.employeeId },
-      data: { language },
+    await prisma.$transaction(async (tx) => {
+      await tx.employeeSettings.update({
+        where: { employeeId: session.employeeId },
+        data: { language },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          entity: "SuperAdminToolbarLanguage",
+          entityId: session.employeeId,
+          action: "UPDATE",
+          employeeId: session.employeeId,
+          oldValue: JSON.stringify({ language: existing.language }),
+          newValue: JSON.stringify({ language }),
+        },
+      });
     });
 
-    await tx.auditLog.create({
-      data: {
-        entity: "SuperAdminToolbarLanguage",
-        entityId: session.employeeId,
-        action: "UPDATE",
-        employeeId: session.employeeId,
-        oldValue: JSON.stringify({ language: existing.language }),
-        newValue: JSON.stringify({ language }),
-      },
-    });
-  });
-
-  return { success: true };
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating toolbar language:", error);
+    return { success: false, error: "Error interno del servidor" };
+  }
 }
 
 export async function getSuperAdminSystemSettingsAction() {
